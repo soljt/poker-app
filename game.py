@@ -44,7 +44,7 @@ class Player:
         returns: amount ADDED to pot
         """
         # if you bet more than you have, you're all in!
-        if self.chips - self.current_bet < amount:
+        if amount > self.chips + self.current_bet:
             amount = self.chips + self.current_bet  
         amount_to_add_to_pot = amount - self.current_bet      
         self.chips -= amount_to_add_to_pot
@@ -216,7 +216,10 @@ class PokerRound:
                 else: # player is rich
                     return self.prompt_player(player, ["call", "raise", "fold"])
         else: # no one has bet yet
-            return self.prompt_player(player, ["check", "bet"])
+            if player.chips < self.bb_amount:
+                return self.prompt_player(player, ["check", "bet (allin)"])
+            else:
+                return self.prompt_player(player, ["check", "bet"])
 
     def prompt_player(self, player: Player, options: List[str]) -> Tuple[str, int]:
         """
@@ -308,7 +311,7 @@ Type the letter(s) corresponding to your choice: """)
         """
 
         self.deal_hands()
-        # check whether game should continue (folded out or not)
+        # check whether game should continue (folded out or not) after each betting round:
         if(not self.collect_bets(preflop=True)):
             self.determine_winner()
             return
