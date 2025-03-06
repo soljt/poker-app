@@ -656,7 +656,7 @@ class TestHandRankingFunctions(unittest.TestCase):
         self.assertEqual(round.determine_winner(), [round.table.btn, round.table.bb])
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
 
     # cards = Deck().cards
     # print(cards, "\n")
@@ -664,8 +664,8 @@ if __name__ == "__main__":
     # print(cards)
 
 
-    # round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 1000), Player("Beeps", 600)], 25, 50)
-    # round.play()
+    round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 1000), Player("Beeps", 600)], 25, 50)
+    round.play()
 
     # hand1 = Hand([Card("A", "diamonds"), Card("A", "diamonds")])
     # print(hand1.hand_ranking)
