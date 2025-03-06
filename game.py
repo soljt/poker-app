@@ -131,7 +131,7 @@ class Hand:
     def __eq__(self, other):
         if self.hand_ranking == other.hand_ranking:
             for i in range(len(self.card_ranks)):
-                if self.card_ranks[i] < other.card_ranks[i]:
+                if self.card_ranks[i] != other.card_ranks[i]:
                     return False
             return True
         else:
@@ -264,7 +264,7 @@ class PokerRound:
             player = player.left
 
         # print info for new betting round
-        print(f"BOARD: {self.board}")
+        print(f"\n\nBOARD: {self.board}\n\n")
         print(f"POT: {self.pot}")
 
     def collect_bets(self, preflop: bool) -> bool:
@@ -370,6 +370,7 @@ class PokerRound:
         # format options to show one-letter codes
         action_options = " | ".join(f"{option} ('{self.ACTIONS.get(option.split(' ')[0], '?')}')" for option in options)
         action = input(f"""Player {player.name}, you have {player.chips}. The current bet is {self.current_bet} and you are in for {player.current_bet}. 
+You have: {player.hand}
 You may: {action_options}
 Type the letter(s) corresponding to your choice: """)
         
@@ -444,9 +445,13 @@ Type the letter(s) corresponding to your choice: """)
             tie = False
             player = self.table.btn
             for _ in range(self.table.num_seats):
+                if player.folded:
+                    player = player.left
+                    continue
                 if best_hand is None or player.best_hand > best_hand:
                     best_hand = player.best_hand
                     winning_player = player
+                    tie = False
                 elif best_hand == player.best_hand:
                     winning_player = [winning_player] + [player]
                     tie = True
@@ -654,6 +659,20 @@ class TestHandRankingFunctions(unittest.TestCase):
             player = player.left
 
         self.assertEqual(round.determine_winner(), [round.table.btn, round.table.bb])
+
+        round = PokerRound(['sol', 'kenna'], 50, 100)
+        round.board = [Card("10", "hearts"), Card("Q", "spades"), Card("J", "spades"), Card("Q", "clubs"), Card("3", "clubs")]
+        player = round.table.btn
+        player.hand = [Card("A", "diamonds"), Card("4", "hearts")]
+        player = player.left
+        player.hand = [Card("2", "spades"), Card("7", "diamonds")]
+
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            print(player.best_hand.hand_ranking, ' | ', player.best_hand.card_ranks)
+            player = player.left
+        print(player.left.hand == player.hand)
+        self.assertEqual(round.determine_winner(), round.table.btn)
 
 if __name__ == "__main__":
     # unittest.main()
