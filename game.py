@@ -115,16 +115,16 @@ class Hand:
         
         # high card
         return (1, list(reversed([Card.RANKS.index(card.rank) for card in self.cards])))
-        
-        
-        
+           
 
     def __lt__(self, other):
         if self.hand_ranking == other.hand_ranking:
             for i in range(len(self.card_ranks)):
                 if self.card_ranks[i] < other.card_ranks[i]:
                     return True
-            return False
+                elif self.card_ranks[i] > other.card_ranks[i]:
+                    return False
+            return False # catches equality as false
         else:
             return self.hand_ranking < other.hand_ranking
     
@@ -169,7 +169,6 @@ class Player:
     
     def fold(self):
         self.folded = True
-        self.current_bet = 0
 
     def determine_best_hand(self, board):
         all_cards = board + self.hand
@@ -389,6 +388,8 @@ Type the letter(s) corresponding to your choice: """)
         return action, amount
     
     def handle_fold(self, player: Player):
+        if player.folded: # for debug purposes
+            return
         player.fold()
         self.active_players -= 1
         # DEBUG
@@ -492,6 +493,16 @@ Type the letter(s) corresponding to your choice: """)
             return
         self.deal_board(1)
         self.collect_bets(preflop=False)
+        self.determine_winner()
+
+    def get_to_showdown(self):
+        self.deal_hands()
+        self.deal_board(3)
+        self.deal_board(1)
+        self.deal_board(1)
+        self.handle_fold(self.table.btn)
+        self.handle_fold(self.table.sb) # folds the same player again in heads up...active_players will be off
+        # self.collect_bets(preflop=False)
         self.determine_winner()
 
 class TestBettingFunctions(unittest.TestCase):
@@ -646,6 +657,8 @@ class TestHandRankingFunctions(unittest.TestCase):
         self.assertEqual(hand2.card_ranks, [0, 12, 6, 3])
         self.assertTrue(hand2 > hand1)  
 
+class TestDetermineWinnerFunctions(unittest.TestCase):
+
     def test_determine_winner(self):
         round = PokerRound(['sol', 'kenna'], 50, 100)
         round.board = [Card("K", "hearts"), Card("J", "hearts"), Card("10", "spades"), Card("Q", "spades"), Card("5", "diamonds")]
@@ -674,6 +687,43 @@ class TestHandRankingFunctions(unittest.TestCase):
         print(player.left.hand == player.hand)
         self.assertEqual(round.determine_winner(), round.table.btn)
 
+    def test_folded_players(self):
+        round = PokerRound(['sol', 'kenna', 'georg'], 50, 100)
+        round.board = [Card("10", "hearts"), Card("Q", "spades"), Card("A", "spades"), Card("Q", "clubs"), Card("3", "clubs")]
+        player = round.table.btn
+        player.hand = [Card("A", "diamonds"), Card("4", "hearts")]
+        round.handle_fold(player) # folds pair of aces
+        player = player.left
+        player.hand = [Card("2", "spades"), Card("7", "diamonds")]
+        player = player.left
+        player.hand = [Card("10", "spades"), Card("7", "hearts")]
+
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            player = player.left
+
+        self.assertEqual(round.determine_winner(), round.table.bb)
+
+    def test_highest_pair_wins(self):
+        round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 1000), Player("Beeps", 600)], 25, 50)
+        round.board = [Card("J", "spades"), Card("3", "hearts"), Card("8", "clubs"), Card("10", "spades"), Card("5", "diamonds")]
+        player = round.table.btn
+        player.hand = [Card("A", "diamonds"), Card("10", "hearts")]
+        player = player.left
+        player.hand = [Card("4", "clubs"), Card("9", "clubs")]
+        player = player.left
+        player.hand = [Card("9", "diamonds"), Card("J", "diamonds")]
+        player = player.left
+        player.hand = [Card("8", "diamonds"), Card("Q", "hearts")]
+
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            player = player.left
+
+        self.assertEqual(round.determine_winner(), round.table.bb)
+
+
+
 if __name__ == "__main__":
     # unittest.main()
 
@@ -684,7 +734,8 @@ if __name__ == "__main__":
 
 
     round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 1000), Player("Beeps", 600)], 25, 50)
-    round.play()
+    round.get_to_showdown()
+    # round.play()
 
     # hand1 = Hand([Card("A", "diamonds"), Card("A", "diamonds")])
     # print(hand1.hand_ranking)
