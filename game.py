@@ -32,33 +32,44 @@ class Deck:
         return f"{', '.join(map(str, self.cards))}"
     
 class Hand:
-    HAND_RANKINGS = {10: "Royal Flush", 9: "Straight Flush", 8: "Quads", 7: "Full House", 6: "Flush", 5: "Straight", 4: "Trips", 3: "Two Pair", 2: "Pair", 1: "High Card"}
+    HAND_RANKS = {10: "Royal Flush", 9: "Straight Flush", 8: "Quads", 7: "Full House", 6: "Flush", 5: "Straight", 4: "Trips", 3: "Two Pair", 2: "Pair", 1: "High Card"}
     def __init__(self, cards: List[Card], sorted=False):
         self.cards = cards
         if not sorted:
             self.cards.sort()
-        self.hand_ranking, self.card_ranks = self.evaluate()
+        self.hand_rank, self.card_ranks = self.evaluate()
 
     def evaluate(self) -> Tuple[int, List[int]]:
-        # check for a flush
+        """
+        Given a SORTED 5-card hand, determine the hand rank (see HAND_RANKS above)
+        and the card ranks (used to break ties - could be kickers or top card of a flush/straight)
+        Card ranks list length differs between hand ranks; high card requires 4 "kickers" whereas 
+        a royal flush either wins or ties outright without looking at other cards
+        returns: (hand_rank: int, card_ranks: [int])
+        """
         suit_counts = {}
         rank_counts = {}
 
         straight = True
         ace_low_straight = False
-        prev_rank_index = Card.RANKS.index(self.cards[0].rank)
-        suit_counts[self.cards[0].suit] = suit_counts.get(self.cards[0].suit, 0) + 1
-        rank_counts[self.cards[0].rank] = rank_counts.get(self.cards[0].rank, 0) + 1
+        prev_rank_index = Card.RANKS.index(self.cards[0].rank) # for tracking straight
+
+        suit_counts[self.cards[0].suit] = suit_counts.get(self.cards[0].suit, 0) + 1 # for tracking flush
+        rank_counts[self.cards[0].rank] = rank_counts.get(self.cards[0].rank, 0) + 1 # for tracking pair, two pair, three, full house, quads
+
         for i in range(1, len(self.cards)):
-            if Card.RANKS.index(self.cards[i].rank) != prev_rank_index + 1:
+            # track straight
+            if Card.RANKS.index(self.cards[i].rank) != prev_rank_index + 1: # cards not in sequence
                 if Card.RANKS.index(self.cards[i].rank) == 12 and prev_rank_index == 3: # account for ace-low straight
                     ace_low_straight = True
                 else:
                     straight = False
+            prev_rank_index = Card.RANKS.index(self.cards[i].rank)
+            
+            # track others
             suit_counts[self.cards[i].suit] = suit_counts.get(self.cards[i].suit, 0) + 1
             rank_counts[self.cards[i].rank] = rank_counts.get(self.cards[i].rank, 0) + 1
-            prev_rank_index = Card.RANKS.index(self.cards[i].rank)
-        
+                  
         flush_suit = [i for i in suit_counts if suit_counts[i] >= 5]
         
         # royal flush
@@ -69,13 +80,14 @@ class Hand:
         # straight flush
         if flush_suit and straight:
             if (ace_low_straight):
-                return(9, [3]) # for the 5
+                return(9, [3]) # 3 is the rank index for the 5
             else:
                 return (9, [top_card_rank_index])
         
         # quads
         quads_rank = [i for i in rank_counts if rank_counts[i] == 4]
         if quads_rank:
+            # card_ranks is first the rank of the quads, then the rank of the kicker - the card in the hand not part of the quads
             return (8, [Card.RANKS.index(quads_rank[0])] + [Card.RANKS.index(card.rank) for card in self.cards if Card.RANKS.index(card.rank) != Card.RANKS.index(quads_rank[0])])
         
         # full house
@@ -98,7 +110,7 @@ class Hand:
         # straight
         if straight:
             if (ace_low_straight):
-                return(5, [3]) # for the 5
+                return(5, [3]) # 3 is the rank index for the 5
             else:
                 return (5, [top_card_rank_index])
         
@@ -119,7 +131,11 @@ class Hand:
            
 
     def __lt__(self, other):
-        if self.hand_ranking == other.hand_ranking:
+        """
+        Allows comparison using > and < between hands. Compare first the hand rank, then if that's
+        not enough, compare each card rank in order
+        """
+        if self.hand_rank == other.hand_rank:
             for i in range(len(self.card_ranks)):
                 if self.card_ranks[i] < other.card_ranks[i]:
                     return True
@@ -127,10 +143,10 @@ class Hand:
                     return False
             return False # catches equality as false
         else:
-            return self.hand_ranking < other.hand_ranking
+            return self.hand_rank < other.hand_rank
     
     def __eq__(self, other):
-        if self.hand_ranking == other.hand_ranking:
+        if self.hand_rank == other.hand_rank:
             for i in range(len(self.card_ranks)):
                 if self.card_ranks[i] != other.card_ranks[i]:
                     return False
@@ -158,18 +174,19 @@ class Player:
         """
         # if you bet more than you have, you're all in!
         if amount > self.chips + self.current_bet:
-            amount = self.chips + self.current_bet  
+            amount = self.chips + self.current_bet 
+         
         amount_to_add_to_pot = amount - self.current_bet      
         self.chips -= amount_to_add_to_pot
         self.current_bet = amount
         if self.chips == 0:
             self.allin = True
         return amount_to_add_to_pot
-    
-    def fold(self):
-        self.folded = True
 
     def determine_best_hand(self, board):
+        """
+        Player determines their own best hand based on the available board and their hole cards
+        """
         all_cards = board + self.hole_cards
         all_cards.sort()
     
@@ -225,16 +242,27 @@ class Pot:
         self.amount = 0
         self.next = None
         self.contribution_limit = sys.maxsize # no limit until a player goes all-in
-        self.max_seen_contribution = 0
+        self.max_seen_contribution = 0 # used to determine whether a pot needs to be restructured
 
     def add(self, player: Player, amount_to_add: int) -> int:
+        """
+        Add a player contribution to the pot. May not be able to add whole amount
+        if pot contribution limit is set too low by an all-in player
+        returns: remaining amount to be added to another pot
+        """
         old_contribution = self.player_contributions.get(player, 0)
-        if old_contribution + amount_to_add > self.contribution_limit: # someone with less chips is already all-in in this pot
+
+        # check whether someone with less chips is already all-in in this pot
+        if old_contribution + amount_to_add > self.contribution_limit: 
             self.amount += self.contribution_limit - old_contribution
             self.player_contributions[player] = self.contribution_limit
             return amount_to_add - (self.contribution_limit - old_contribution)
+        
+        # can safely add the whole amount to this pot
         self.amount += amount_to_add
         self.player_contributions[player] = old_contribution + amount_to_add
+
+        # update pot info
         if self.player_contributions[player] > self.max_seen_contribution:
             self.max_seen_contribution = self.player_contributions[player]
         if player.allin:
@@ -242,13 +270,16 @@ class Pot:
         return 0
 
     def award_pot(self, ranked_active_players: List[List[Player]]):
+        """
+        Given a hand-ranking of active players, award pot to the best-handed player(s) involved in the pot.
+        """
+        
         # find intersection between best_hands and current pot
-
         # start with the strongest group of hands (likely only one player)
         group_idx = 0
         winners = [player for player in ranked_active_players[group_idx] if player in self.player_contributions]
 
-        # if the players with the best hand are not in this pot, try the next group
+        # if the players with the best hand are not in this pot, repeatedly try the next group
         # AT LEAST ONE of the groups will have a player in this pot (since the union of the groups is all active players)
         while not winners:
             group_idx += 1
@@ -267,9 +298,13 @@ class Pot:
 class PotCollection:
     def __init__(self):
         self.main_pot = Pot()
-        self.current_pot = self.main_pot
+        self.current_pot = self.main_pot # current pot will point to the first pot to try adding into
     
     def add_contribution(self, player: Player, amount_to_add: int):
+        """
+        Add a player contribution to the collection of pots. May need to be split among multiple pots
+        """
+        # try to add to the current pot
         pot = self.current_pot
         remainder = pot.add(player, amount_to_add)
         # check whether a side pot is created due to overflow of this bet
@@ -278,15 +313,21 @@ class PotCollection:
                 pot.next = Pot()
             pot = pot.next
             remainder = pot.add(player, remainder)
-        # check whether the final pot needs to be split due to a player calling (all in) for less than the current bet
+        # check whether the final pot needs to be split due to this player calling all-in for less than the current bet
         if pot.max_seen_contribution > pot.contribution_limit:
             self.restructure_pot(pot)
 
     def restructure_pot(self, pot: Pot):
+        """
+        Handle the case where a player calls, but can't match the current bet and therefore goes all-in.
+        The player must only be eligible to win bets up to their all-in amount, which requires "capping"
+        this pot and moving bets over the all-in amount to a new side-pot
+        """
         # move contributions over the contribution limit to a new pot
         temp = pot.next
         pot.next = Pot()
         pot.next.next = temp
+
         for player in pot.player_contributions:
             surplus = pot.player_contributions[player] - pot.contribution_limit
             if surplus > 0:
@@ -297,12 +338,20 @@ class PotCollection:
         pot.max_seen_contribution = pot.contribution_limit
 
     def end_betting_round(self):
+        """
+        Handle the end of a betting round. 
+        - Clean up garbage pots (created when a player bets into a 
+          side pot but no one joins the action) 
+        - Update the current_pot pointer to point to the pot at the 
+          end of the linked list, since all new action must start
+          there
+        """
         prev = curr = self.current_pot
         while curr.next:
             prev = curr
             curr = curr.next
 
-        # curr is the final pot
+        # curr is the final pot, prev is the penultimate pot
         # if the final pot has only one member, it is due to over-contribution by a player who was not called
         # or, all who could call folded - give the player back these chips and delete the pot for the next round
         if len(curr.player_contributions) <= 1:
@@ -315,21 +364,26 @@ class PotCollection:
         self.current_pot = curr # update current pot to be the final pot after a round
 
     def award_pot(self, ranked_active_players: List[List[Player]]):
-        pot = self.main_pot
+        """
+        Given a hand-ranked list of players, award the pot(s) to the best player(s) in it (them)
+        """
         print(f"----------------------POT COLLECTION--------------------------")
+        pot = self.main_pot
         while pot:         
             pot.award_pot(ranked_active_players)
             pot = pot.next
-        print('-' * 20)
+        print('-' * 80)
 
     def __repr__(self):
         curr = self.main_pot
         string = ""
         while curr:
             string += curr.__repr__()
-            string += "\n|" * 3
-            string += "\nv\n"
             curr = curr.next
+            if curr:
+                string += "\n|" * 3
+                string += "\nv\n"
+            
         return string
 
 class PokerRound:
@@ -355,6 +409,9 @@ class PokerRound:
         self.pot_index = 0
 
     def deal_hands(self):
+        """
+        Deal each player 2 cards from the deck
+        """
         player = self.table.sb
         for i in range(self.table.num_seats):
             player.hole_cards = self.deck.deal(2)
@@ -373,6 +430,9 @@ class PokerRound:
         print(f"POT: {self.pot}")
 
     def deal_board(self, num_cards: int):
+        """
+        Deal the specified number of cards to the board
+        """
         self.board += self.deck.deal(num_cards)
 
         # get players to update their best hands
@@ -386,9 +446,10 @@ class PokerRound:
         print(f"POT: {self.pot}")
 
     def collect_bets(self, preflop: bool, final_round = False) -> bool:
-        """Collect player bets
+        """
+        Collect player bets
         returns: True when dealing should continue
-                 False when all players but one have folded
+                 False when there is no more possible action (only one remaining player can bet)
         """   
         # determine starting player and last-to-act based on placement of betting round in game (preflop vs post, headsup game vs full table)
         player, last_to_act = self.get_betting_order(preflop)
@@ -403,7 +464,7 @@ class PokerRound:
                 continue
 
             # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
-            if (len(self.active_players) - self.allin_players) == 1 and player.current_bet == self.current_bet: 
+            if (len(self.active_players) - len(self.allin_players)) == 1 and player.current_bet == self.current_bet: 
                     return True
             
             # get the player action
@@ -460,7 +521,7 @@ class PokerRound:
     def determine_player_options(self, player: Player) -> Tuple[str, int]:
         """
         Decide which options to present to player and call prompt_player
-        returns: action: str, amount: int
+        returns: (action: str, amount: int)
         action is a one-letter code according to self.ACTIONS
         amount is 0 for call, check, and fold
         """
@@ -470,7 +531,7 @@ class PokerRound:
             else:
                 if player.chips + player.current_bet <= self.current_bet: # player doesn't have enough to raise (or possibly to call)
                     return ["call (allin)", "fold"]
-                elif (len(self.active_players) - self.allin_players) == 1:
+                elif (len(self.active_players) - len(self.allin_players)) == 1:
                     return ["call", "fold"]
                 elif player.chips + player.current_bet <= 2*self.current_bet: # player doesn't have enough to min-raise
                     return ["call", "raise (allin)", "fold"]         
@@ -511,13 +572,16 @@ Type the letter(s) corresponding to your choice: """)
         return action, amount
     
     def get_player_action(self, player):
+        """
+        Packaged functionality for readability
+        """
         options = self.determine_player_options(player)
         return self.prompt_player(player, options)
     
     def handle_fold(self, player: Player):
         if player.folded: # for debug purposes
             return
-        player.fold()
+        player.folded = True
         self.active_players.remove(player)
         # DEBUG
         print(f"{player.name} now has {player.chips} and is in for {player.current_bet}. All in? {player.allin}")
@@ -525,8 +589,6 @@ Type the letter(s) corresponding to your choice: """)
     def handle_call(self, player: Player):
         # player may not have enough to call
         self.pot.add_contribution(player, player.bet(self.current_bet))
-        # in case player cannot call the current bet (goes allin)
-        self.current_bet = max(player.current_bet, self.current_bet) 
         # DEBUG
         print(f"{player.name} now has {player.chips} and is in for {player.current_bet}. All in? {player.allin}")
 
@@ -539,6 +601,9 @@ Type the letter(s) corresponding to your choice: """)
         print(f"{player.name} now has {player.chips} and is in for {player.current_bet}. All in? {player.allin}")
         
     def end_betting_round(self):
+        """
+        Reset player and table bets
+        """
         self.current_bet = 0
         player = self.table.btn
         for _ in range(self.table.num_seats):
@@ -548,49 +613,40 @@ Type the letter(s) corresponding to your choice: """)
             
     def rank_active_players(self) -> List[List[Player]]:
         """
-        Determine the winning hand after the hand goes to showdown
-        returns: winning_player: Player
+        Rank the players according to hand strength. Players of the same hand rank AND 
+        card ranks will be grouped. Groups may consist of only one player (if only that
+        player makes that hand rank and card rank(s))
+        returns: [[Player]] 
+        Outer list is a list of groups, inner lists are players within a group. Groups are ordered 
+        strongest to weakest
         """
-        # win without showdown
         ranked_active_players = []
-        if len(self.active_players) == 1: 
-            player = self.table.btn
-            while player:
-                if not player.folded:
-                    show = input(f"{player.name} wins {self.pot} chips without showdown! Show? (y/n): ")
-                    if show == 'y':
-                        print(f"{player.name} had {player.hole_cards}")
-                    ranked_active_players = [[player]]
+        player = self.table.btn
+        for _ in range(self.table.num_seats):
+            if player.folded:
+                player = player.left
+                continue
+            # find insertion point
+            for i, group in enumerate(ranked_active_players):
+                if player.best_hand > group[0].best_hand: # starting from strongest hand, player gets inserted if he beats a hand
+                    ranked_active_players.insert(i, [player])
                     break
-                player = player.left
-        # showdown ; find best hand and winning player(s) (chop)
-        else:
-            player = self.table.btn
-            for _ in range(self.table.num_seats):
-                if player.folded:
-                    player = player.left
-                    continue
-                # find insertion point
-                for i, group in enumerate(ranked_active_players):
-                    if player.best_hand > group[0].best_hand: # starting from strongest hand, player gets inserted if he beats a hand
-                        ranked_active_players.insert(i, [player])
-                        break
-                    elif player.best_hand == group[0].best_hand: # case where two players would chop
-                        group.append(player)
-                        break
-                else:
-                    ranked_active_players.append([player]) # didn't beat or tie anyone (no break was hit)
-                player = player.left    
+                elif player.best_hand == group[0].best_hand: # case where two players would chop
+                    group.append(player)
+                    break
+            else:
+                ranked_active_players.append([player]) # didn't beat or tie anyone (no break was hit)
+            player = player.left    
 
-            ### DEBUG ############################################
-            
-            print(f"RANKING: {ranked_active_players}")
-            print(f"BOARD: {self.board}")
-            player = self.table.btn
-            for _ in range(self.table.num_seats):
-                print(f"{player.name} makes {Hand.HAND_RANKINGS[player.best_hand.hand_ranking]} from {player.hole_cards}")
-                player = player.left
-            ### DEBUG ############################################
+        ### DEBUG ############################################
+        
+        print(f"RANKING: {ranked_active_players}")
+        print(f"BOARD: {self.board}")
+        player = self.table.btn
+        for _ in range(self.table.num_seats):
+            print(f"{player.name} makes {Hand.HAND_RANKS[player.best_hand.hand_rank]} from {player.hole_cards}")
+            player = player.left
+        ### DEBUG ############################################
 
 
         return ranked_active_players
@@ -610,7 +666,7 @@ Type the letter(s) corresponding to your choice: """)
             if player in winning_players:
                 winner_seen = True
                 for player in winning_players:
-                    print(f"{player.name} shows {player.hole_cards} and wins with {Hand.HAND_RANKINGS[winning_players[0].best_hand.hand_ranking]}")
+                    print(f"{player.name} shows {player.hole_cards} and wins with {Hand.HAND_RANKS[winning_players[0].best_hand.hand_rank]}")
             elif winner_seen:
                 if(input(f"{player.name}, will you show? (y/n): ") == 'y'):
                     print(f"{player.name} shows {player.hole_cards}")
@@ -680,131 +736,131 @@ class TestHandRankingFunctions(unittest.TestCase):
 
     def test_royal_flush(self):
         hand = Hand([Card("K", "spades"), Card("A", "spades"), Card("J", "spades"), Card("10", "spades"), Card("Q", "spades")])
-        self.assertEqual(hand.hand_ranking, 10)
+        self.assertEqual(hand.hand_rank, 10)
 
         hand = Hand([Card("K", "hearts"), Card("A", "spades"), Card("J", "spades"), Card("10", "spades"), Card("Q", "spades")])
-        self.assertEqual(hand.hand_ranking, 5)
+        self.assertEqual(hand.hand_rank, 5)
 
     def test_straight_flush(self):
         hand1 = Hand([Card("K", "diamonds"), Card("9", "diamonds"), Card("J", "diamonds"), Card("10", "diamonds"), Card("Q", "diamonds")])
-        self.assertEqual(hand1.hand_ranking, 9)
+        self.assertEqual(hand1.hand_rank, 9)
         self.assertEqual(hand1.card_ranks, [11])
         hand2 = Hand([Card("8", "diamonds"), Card("9", "diamonds"), Card("J", "diamonds"), Card("10", "diamonds"), Card("Q", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 9)
+        self.assertEqual(hand2.hand_rank, 9)
         self.assertEqual(hand2.card_ranks, [10])
         self.assertTrue(hand2 < hand1)
 
     def test_quads(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("10", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 8)
+        self.assertEqual(hand1.hand_rank, 8)
         self.assertEqual(hand1.card_ranks, [8, 12])
         hand2 = Hand([Card("8", "diamonds"), Card("8", "hearts"), Card("8", "clubs"), Card("8", "spades"), Card("Q", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 8)
+        self.assertEqual(hand2.hand_rank, 8)
         self.assertEqual(hand2.card_ranks, [6, 10])
         self.assertTrue(hand2 < hand1)
         hand3 = Hand([Card("10", "diamonds"), Card("7", "hearts"), Card("10", "hearts"), Card("10", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand3.hand_ranking, 8)
+        self.assertEqual(hand3.hand_rank, 8)
         self.assertEqual(hand3.card_ranks, [8, 5])
         self.assertTrue(hand3 < hand1)
 
     def test_full_house(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("A", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 7)
+        self.assertEqual(hand1.hand_rank, 7)
         self.assertEqual(hand1.card_ranks, [8, 12])
         hand2 = Hand([Card("8", "diamonds"), Card("8", "hearts"), Card("8", "clubs"), Card("Q", "spades"), Card("Q", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 7)
+        self.assertEqual(hand2.hand_rank, 7)
         self.assertEqual(hand2.card_ranks, [6, 10])
         self.assertTrue(hand2 < hand1)
         hand3 = Hand([Card("10", "diamonds"), Card("7", "hearts"), Card("10", "hearts"), Card("7", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand3.hand_ranking, 7)
+        self.assertEqual(hand3.hand_rank, 7)
         self.assertEqual(hand3.card_ranks, [8, 5])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 > hand2)
 
     def test_flush(self):
         hand1 = Hand([Card("K", "spades"), Card("A", "spades"), Card("5", "spades"), Card("10", "spades"), Card("Q", "spades")])
-        self.assertEqual(hand1.hand_ranking, 6)
+        self.assertEqual(hand1.hand_rank, 6)
         self.assertEqual(hand1.card_ranks, [12])
         hand2 = Hand([Card("K", "spades"), Card("2", "spades"), Card("J", "spades"), Card("10", "spades"), Card("Q", "spades")])
-        self.assertEqual(hand2.hand_ranking, 6)
+        self.assertEqual(hand2.hand_rank, 6)
         self.assertEqual(hand2.card_ranks, [11])
         self.assertTrue(hand1 > hand2)
 
     def test_straight(self):
         hand1 = Hand([Card("K", "hearts"), Card("A", "spades"), Card("J", "spades"), Card("10", "spades"), Card("Q", "spades")])
-        self.assertEqual(hand1.hand_ranking, 5)
+        self.assertEqual(hand1.hand_rank, 5)
         self.assertEqual(hand1.card_ranks, [12])
         hand2 = Hand([Card("2", "hearts"), Card("A", "spades"), Card("3", "diamonds"), Card("5", "hearts"), Card("4", "clubs")])
-        self.assertEqual(hand2.hand_ranking, 5)
+        self.assertEqual(hand2.hand_rank, 5)
         self.assertEqual(hand2.card_ranks, [3])
         self.assertTrue(hand1 > hand2)
 
     def test_trips(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("3", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 4)
+        self.assertEqual(hand1.hand_rank, 4)
         self.assertEqual(hand1.card_ranks, [8, 12, 1])
         hand2 = Hand([Card("8", "diamonds"), Card("8", "hearts"), Card("8", "clubs"), Card("A", "spades"), Card("2", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 4)
+        self.assertEqual(hand2.hand_rank, 4)
         self.assertEqual(hand2.card_ranks, [6, 12, 0])
         self.assertTrue(hand2 < hand1)
         hand3 = Hand([Card("10", "diamonds"), Card("7", "hearts"), Card("10", "hearts"), Card("6", "spades"), Card("10", "clubs")])
-        self.assertEqual(hand3.hand_ranking, 4)
+        self.assertEqual(hand3.hand_rank, 4)
         self.assertEqual(hand3.card_ranks, [8, 5, 4])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 > hand2)
     
     def test_two_pair(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("3", "spades"), Card("3", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 3)
+        self.assertEqual(hand1.hand_rank, 3)
         self.assertEqual(hand1.card_ranks, [8, 1, 12])
         hand2 = Hand([Card("8", "diamonds"), Card("8", "hearts"), Card("A", "clubs"), Card("A", "spades"), Card("2", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 3)
+        self.assertEqual(hand2.hand_rank, 3)
         self.assertEqual(hand2.card_ranks, [12, 6, 0])
         self.assertTrue(hand2 > hand1)
         hand3 = Hand([Card("10", "diamonds"), Card("7", "hearts"), Card("10", "spades"), Card("3", "spades"), Card("3", "diamonds")])
-        self.assertEqual(hand3.hand_ranking, 3)
+        self.assertEqual(hand3.hand_rank, 3)
         self.assertEqual(hand3.card_ranks, [8, 1, 5])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 < hand2)    
 
     def test_pair(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("9", "spades"), Card("3", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 2)
+        self.assertEqual(hand1.hand_rank, 2)
         self.assertEqual(hand1.card_ranks, [8, 12, 7, 1])
         hand2 = Hand([Card("8", "diamonds"), Card("5", "hearts"), Card("A", "clubs"), Card("2", "spades"), Card("2", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 2)
+        self.assertEqual(hand2.hand_rank, 2)
         self.assertEqual(hand2.card_ranks, [0, 12, 6, 3])
         self.assertTrue(hand2 < hand1)
         hand3 = Hand([Card("3", "diamonds"), Card("7", "hearts"), Card("4", "spades"), Card("8", "spades"), Card("3", "hearts")])
-        self.assertEqual(hand3.hand_ranking, 2)
+        self.assertEqual(hand3.hand_rank, 2)
         self.assertEqual(hand3.card_ranks, [1, 6, 5, 2])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 > hand2)  
         hand4 = Hand([Card("3", "diamonds"), Card("7", "hearts"), Card("5", "spades"), Card("8", "spades"), Card("3", "hearts")])
-        self.assertEqual(hand4.hand_ranking, 2)
+        self.assertEqual(hand4.hand_rank, 2)
         self.assertEqual(hand4.card_ranks, [1, 6, 5, 3])
         self.assertTrue(hand3 < hand4)
 
     def test_high_card(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("K", "hearts"), Card("9", "spades"), Card("3", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 1)
+        self.assertEqual(hand1.hand_rank, 1)
         self.assertEqual(hand1.card_ranks, [12, 11, 8, 7, 1])
         hand2 = Hand([Card("8", "diamonds"), Card("5", "hearts"), Card("A", "clubs"), Card("9", "spades"), Card("2", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 1)
+        self.assertEqual(hand2.hand_rank, 1)
         self.assertEqual(hand2.card_ranks, [12, 7, 6, 3, 0])
         self.assertTrue(hand2 < hand1)
         hand3 = Hand([Card("3", "diamonds"), Card("7", "hearts"), Card("4", "spades"), Card("8", "spades"), Card("9", "hearts")])
-        self.assertEqual(hand3.hand_ranking, 1)
+        self.assertEqual(hand3.hand_rank, 1)
         self.assertEqual(hand3.card_ranks, [7, 6, 5, 2, 1])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 < hand2)  
 
     def test_pair_beats_high_card(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("K", "hearts"), Card("9", "spades"), Card("3", "clubs")])
-        self.assertEqual(hand1.hand_ranking, 1)
+        self.assertEqual(hand1.hand_rank, 1)
         self.assertEqual(hand1.card_ranks, [12, 11, 8, 7, 1])     
         hand2 = Hand([Card("8", "diamonds"), Card("5", "hearts"), Card("A", "clubs"), Card("2", "spades"), Card("2", "diamonds")])
-        self.assertEqual(hand2.hand_ranking, 2)
+        self.assertEqual(hand2.hand_rank, 2)
         self.assertEqual(hand2.card_ranks, [0, 12, 6, 3])
         self.assertTrue(hand2 > hand1)  
 
@@ -833,7 +889,7 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
 
         for _ in range(round.table.num_seats):
             player.determine_best_hand(round.board)
-            print(player.best_hand.hand_ranking, ' | ', player.best_hand.card_ranks)
+            print(player.best_hand.hand_rank, ' | ', player.best_hand.card_ranks)
             player = player.left
         print(player.left.hole_cards == player.hole_cards)
         self.assertEqual(round.rank_active_players(), [[round.table.btn], [round.table.bb]])
@@ -920,7 +976,7 @@ if __name__ == "__main__":
     # round.play()
 
     # hand1 = Hand([Card("A", "diamonds"), Card("A", "diamonds")])
-    # print(hand1.hand_ranking)
+    # print(hand1.hand_rank)
     # print(hand1.card_ranks)    
 
     # deck = Deck()
