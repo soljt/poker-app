@@ -439,10 +439,14 @@ class PokerRound:
         Deal each player 2 cards from the deck
         """
         player = self.table.sb
+
+        player_hole_cards = {}
+
         for i in range(self.table.num_seats):
             player.hole_cards = self.deck.deal(2)
             player.determine_best_hand(self.board)
             print(f"{player.name} got dealt: {player.hole_cards}")
+            player_hole_cards[player.name] = []
             player = player.left
 
         self.pot.add_contribution(self.table.sb, self.table.sb.bet(self.sb_amount)) # may be less than the SB amount
