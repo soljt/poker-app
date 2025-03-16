@@ -192,11 +192,24 @@ class Player:
     
         best = None
         # generate all 5-card combinations
+        if len(all_cards) < 5:
+            self.best_hand = Hand(all_cards, sorted=True)
+            return
         for combo in itertools.combinations(all_cards, 5):
             hand = Hand(list(combo), sorted=True)
             if best is None or hand > best:
                 best = hand
         self.best_hand = best
+
+    def reset(self):
+        """
+        Prepare player for new poker round
+        """
+        self.current_bet = 0
+        self.folded = False
+        self.allin = False
+        self.best_hand = None
+        self.hole_cards = []
 
     def __repr__(self):
         return f"{self.name}"
@@ -234,7 +247,16 @@ class Table:
     def rotate(self):
         self.btn = self.btn.left
         self.sb = self.sb.left
-        self.bb = self.bb.left         
+        self.bb = self.bb.left     
+
+    def reset(self):
+        """
+        Prepare for a new round of poker
+        """    
+        player = self.btn
+        for _ in range(self.num_seats):
+            player.reset()
+            player = player.left
 
 class Pot:
     def __init__(self):
@@ -248,6 +270,7 @@ class Pot:
         """
         Add a player contribution to the pot. May not be able to add whole amount
         if pot contribution limit is set too low by an all-in player
+
         returns: remaining amount to be added to another pot
         """
         old_contribution = self.player_contributions.get(player, 0)
@@ -389,8 +412,12 @@ class PotCollection:
 class PokerRound:
     ACTIONS = {"check": 'k', "raise": 'r', "bet": 'b', "reraise": 'rr', "call": 'c', "fold": 'f'}
 
-    def __init__(self, players: Union[List[str], List[Player]], small_blind: int, big_blind: int):   
-        self.table = Table(len(players), players)
+    def __init__(self, players: Union[List[str], List[Player], Table], small_blind: int, big_blind: int): 
+        if isinstance(players, Table):
+            self.table = players
+            self.table.reset()
+        else:
+            self.table = Table(len(players), players)
         self.deck = Deck()
         self.board = []
         self.current_bet = 0
@@ -406,7 +433,6 @@ class PokerRound:
             self.active_players.add(player)
             player = player.left
         self.pot = PotCollection()
-        self.pot_index = 0
 
     def deal_hands(self):
         """
@@ -415,6 +441,7 @@ class PokerRound:
         player = self.table.sb
         for i in range(self.table.num_seats):
             player.hole_cards = self.deck.deal(2)
+            player.determine_best_hand(self.board)
             print(f"{player.name} got dealt: {player.hole_cards}")
             player = player.left
 
@@ -650,6 +677,13 @@ Type the letter(s) corresponding to your choice: """)
 
 
         return ranked_active_players
+    
+    def end_round(self):
+        """
+        Prepare for next round of poker
+        """
+        # destroy the old deck and make a new one
+        self.deck = Deck()
         
     def showdown(self, winning_players):
         # show cards in order
@@ -682,24 +716,24 @@ Type the letter(s) corresponding to your choice: """)
         self.deal_hands()
         # check whether game should continue (folded out or not) after each betting round:
         if(not self.collect_bets(preflop=True)):
-            winners = self.rank_active_players()
-            self.pot.award_pot(winners)
+            ranked_active_players = self.rank_active_players()
+            self.pot.award_pot(ranked_active_players)
             return
         self.deal_board(3)
         if(not self.collect_bets(preflop=False)):
             self.rank_active_players()
-            winners = self.rank_active_players()
-            self.pot.award_pot(winners)
+            ranked_active_players = self.rank_active_players()
+            self.pot.award_pot(ranked_active_players)
             return
         self.deal_board(1)
         if(not self.collect_bets(preflop=False)):
-            winners = self.rank_active_players()
-            self.pot.award_pot(winners)
+            ranked_active_players = self.rank_active_players()
+            self.pot.award_pot(ranked_active_players)
             return
         self.deal_board(1)
         self.collect_bets(preflop=False, final_round=True)
-        winners = self.rank_active_players()
-        self.pot.award_pot(winners)
+        ranked_active_players = self.rank_active_players()
+        self.pot.award_pot(ranked_active_players)
         # self.showdown()
 
     def get_to_showdown(self):
@@ -963,7 +997,7 @@ class TestPots(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
 
     # cards = Deck().cards
     # print(cards, "\n")
@@ -971,9 +1005,12 @@ if __name__ == "__main__":
     # print(cards)
 
 
-    # round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 5000), Player("Beeps", 600)], 25, 50)
+    round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 5000), Player("Beeps", 600)], 25, 50)
     # round.get_to_showdown()
-    # round.play()
+    while True:
+        round.play()
+        round.table.rotate()
+        round = PokerRound(round.table, 25, 50)
 
     # hand1 = Hand([Card("A", "diamonds"), Card("A", "diamonds")])
     # print(hand1.hand_rank)
