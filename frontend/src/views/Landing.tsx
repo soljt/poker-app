@@ -26,7 +26,8 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="App">
+    <div className="container">
+      <h1>Welcome to Sol-Poker.ch!</h1>
       <ConnectionState isConnected={isConnected} />
       <CheckIn />
     </div>

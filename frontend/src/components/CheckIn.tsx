@@ -27,7 +27,7 @@ export function CheckIn() {
 
   return (
     <>
-      <div className="d-flex justify-content-around">
+      <div className="d-flex justify-content-left">
         <button className="btn btn-primary btn-lg" onClick={handleClickCheckIn}>
           Check In
         </button>
