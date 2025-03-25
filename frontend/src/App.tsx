@@ -1,15 +1,19 @@
-import { useState } from "react";
-import JoinGame from "./JoinGame";
-import PokerGame from "./PokerGame";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Landing from "./views/Landing.tsx";
+import Lobby from "./views/Lobby.tsx";
+import Login from "./views/Login.tsx";
+import { ToastContainer } from "react-toastify";
 
-function App() {
-  const [player, setPlayer] = useState("");
-
+export default function App() {
   return (
-    <div>
-      {player ? <PokerGame player={player} /> : <JoinGame setPlayer={setPlayer} />}
-    </div>
+    <Router>
+      {/*Navbar, Outlet(?)*/}
+      <ToastContainer />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/lobby" element={<Lobby />} />
+        <Route path="login" element={<Login />} />
+      </Routes>
+    </Router>
   );
 }
-
-export default App;

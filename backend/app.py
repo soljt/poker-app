@@ -1,11 +1,13 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request, session, jsonify
 from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from game.game import PokerRound, Player  # Import your PokerRound logic
-from flask import url_for
+from db import init_db, db, User
 
 app = Flask(__name__)
-CORS(app)  # Allow frontend to access backend
+app.secret_key = "secret_sauce@45*"
+CORS(app, supports_credentials=True)  # Allow frontend to access backend
+init_db(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 players = {}  # Store players: {"username": Player}
@@ -42,13 +44,61 @@ def handle_start_game():
 
     # Send each player their own hand
     for username, player in players.items():
-        emit("your_hand", {"cards": [str(card) for card in player.hole_cards]}, room=username)
+        cards = [str(card) for card in player.hole_cards]
+        emit("your_hand", {"cards": cards}, room=username)
+        print(cards)
 
-
+@socketio.on("check_in")
+def handle_check_in():
+    emit("checked_in", {"message" : "this worked"})
 
 @app.route("/")
 def hello_world():
-    return f"<h1>hello world</h1>"
+    users = db.session.execute(db.select(User)).scalars().all()
+    users_string = ("\n").join([f"<h1>{user.to_dict()}</h1>" for user in users])
+    return f"<h1>users: \n{users_string}</h1>\n<h2>session: {session}</h2>"
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    user = db.session.execute(db.select(User).filter_by(username=data["username"])).scalar_one_or_none()
+    if not user:
+        return jsonify({"error": "Username not found"}), 404
+    if not user.check_password(data["password"]):
+        return jsonify({"error": "Incorrect password"}), 401
+    
+    # TODO TOKEN
+    session["user"] = user.to_dict()
+    return jsonify(session["user"])
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.json
+    new_usr = User(data["username"], data["chips"], data["password"]) 
+    db.session.add(new_usr)
+    db.session.commit()    
+
+    # TODO TOKEN
+    session["user"] = user.to_dict()
+    return jsonify(session["user"])
+
+@app.route("/user")
+def user():
+    if "user" not in session:
+        user = db.session.execute(db.select(User).filter_by(id=request.args.get("userId"))).scalar_one_or_none()
+        if not user:
+            return jsonify({"error": "User does not exist"})
+        session["user"] = user.to_dict()
+    return jsonify(session["user"])
+
+
+@app.route("/make-sol", methods=["GET"])
+def add_user():
+    new_usr = User("kenna", 1000, "ilovemybf") # soljt password: pass
+    db.session.add(new_usr)
+    db.session.commit()
+    return f"<h1>SUCCESS</h1>"
+
 
 # @app.route("/<name>")
 # def hello_you(name):

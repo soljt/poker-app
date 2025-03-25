@@ -4,18 +4,22 @@ import { io } from "socket.io-client";
 const socket = io("http://127.0.0.1:5000");
 
 interface PokerGameProps {
-    player: string |null
+  player: string | null;
 }
 
 function PokerGame({ player }: PokerGameProps) {
   const [hand, setHand] = useState<string[]>([]);
-  
+
+  useEffect(() => {
+    console.log("Hand updated:", hand);
+  }, [hand]); // Runs whenever hand changes
+
   useEffect(() => {
     // Listen for the player's hand
     socket.on("your_hand", (data) => {
       setHand(data.cards);
     });
-  }, []);
+  });
 
   const startGame = () => {
     socket.emit("start_game");
