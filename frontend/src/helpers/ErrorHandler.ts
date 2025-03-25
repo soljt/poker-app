@@ -1,6 +1,8 @@
 import axios from "axios";
 import { toast } from "react-toastify";
 
+// Typescript is the most annoying thing I've ever worked with
+
 interface ValidationErrors {
   [key: string]: string[];
 }

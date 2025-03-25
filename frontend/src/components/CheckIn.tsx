@@ -17,9 +17,7 @@ export function CheckIn() {
 
   function handleClickCheckIn() {
     socket.emit("check_in");
-    const user = localStorage.getItem("user");
-    alert({ typeof: user });
-    //navigate("/lobby");
+    navigate("/lobby");
     // socket.on("checked_in", (response) => alert(response.message));
   }
 
