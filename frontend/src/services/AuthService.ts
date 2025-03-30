@@ -6,7 +6,16 @@ const api = "http://localhost:5000";
 
 export const loginAPI = async (username: string, password: string) => {
     try {
-        const data = await axios.post<UserToken>(api + "/login", {username: username, password: password});
+        const data = await axios.post<UserToken>(api + "/login", {username: username, password: password}, {withCredentials: true});
+        return data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+export const logoutAPI = async () => {
+    try {
+        const data = await axios.post(api + "/login");
         return data;
     } catch (error) {
         handleError(error);

@@ -1,27 +1,38 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import axios, { AxiosError } from "axios";
-import { User } from "../models/User";
+import { AxiosError } from "axios";
+// import axios, { AxiosError } from "axios";
+// import { User } from "../models/User";
+import { useAuth } from "../context/useAuth";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { isLoggedIn, loginUser } = useAuth();
 
   useEffect(() => {
-    const checkLogin = async () => {
-      if (localStorage.getItem("user")) {
-        const userObj = JSON.parse(
-          localStorage.getItem("user") || "{}"
-        ) as User;
-        const res = await axios.get("http://127.0.0.1:5000/user", {
-          params: { userId: userObj.id },
-        });
-        localStorage.setItem("user", JSON.stringify(res.data));
+    try {
+      if (isLoggedIn()) {
         navigate("/");
       }
-    };
+    } catch {
+      toast.warning("Something bad");
+    }
+    // const checkLogin = async () => {
+    //   if (localStorage.getItem("user")) {
+    //     const userObj = JSON.parse(
+    //       localStorage.getItem("user") || "{}"
+    //     ) as User;
+    //     const res = await axios.get("http://127.0.0.1:5000/user", {
+    //       params: { userId: userObj.id },
+    //     });
+    //     localStorage.setItem("user", JSON.stringify(res.data));
+    //     navigate("/");
+    //   }
+    // };
 
-    checkLogin();
-  }, [navigate]);
+    // checkLogin();
+  }, [isLoggedIn, navigate]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,10 +42,11 @@ export default function Login() {
     if (!username) return alert("Enter a username");
 
     try {
-      const requestBody = { username, password };
-      const res = await axios.post("http://127.0.0.1:5000/login", requestBody);
-      localStorage.setItem("user", JSON.stringify(res.data));
-      navigate("/");
+      loginUser(username, password);
+      // const requestBody = { username, password };
+      // const res = await axios.post("http://127.0.0.1:5000/login", requestBody);
+      // localStorage.setItem("user", JSON.stringify(res.data));
+      // navigate("/");
     } catch (error: unknown) {
       const err = error as AxiosError<{ error: string }>;
       if (err.response) {

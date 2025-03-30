@@ -3,3 +3,8 @@ export type UserToken = {
     chips: bigint;
     token: string;
 }
+
+export type User = {
+    username: string;
+    chips: bigint;
+}

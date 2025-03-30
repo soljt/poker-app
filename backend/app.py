@@ -1,18 +1,34 @@
+from datetime import datetime, timedelta, timezone
 from flask import Flask, request, session, jsonify
+from flask_jwt_extended import create_access_token, current_user, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
 from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
-from game.game import PokerRound, Player  # Import your PokerRound logic
+from game.game import PokerRound, Player
 from db import init_db, db, User
 
 app = Flask(__name__)
+
+# CORS
 app.secret_key = "secret_sauce@45*"
-CORS(app, supports_credentials=True)  # Allow frontend to access backend
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:5173"}})
+
+# db - see db.py
 init_db(app)
+
+# jwt (auth)
+app.config["JWT_SECRET_KEY"] = "Bru5$j^yeah"
+app.config["JWT_COOKIE_SECURE"] = False # DEBUG ONLY: set true when released
+app.config["JWT_COOKIE_SAMESITE"] = "Lax"
+app.config["JWT_CSRF_IN_COOKIES"] = False
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+jwt = JWTManager(app)
+
+# sockets (game state)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-players = {}  # Store players: {"username": Player}
-game = None   # Store the game instance
-
+players = {}
+game = None
 
 @socketio.on("join")
 def handle_join(data):
@@ -26,7 +42,7 @@ def handle_join(data):
     
     new_player = Player(username, chips)
     players[username] = new_player
-    join_room(username)  # Creates a private "room" for this player
+    join_room(username)
     
     emit("joined", {"message": f"Welcome, {username}!"}, room=username)
 
@@ -42,7 +58,6 @@ def handle_start_game():
     game = PokerRound(list(players.values()), small_blind=5, big_blind=10)
     game.deal_hands()
 
-    # Send each player their own hand
     for username, player in players.items():
         cards = [str(card) for card in player.hole_cards]
         emit("your_hand", {"cards": cards}, room=username)
@@ -52,11 +67,43 @@ def handle_start_game():
 def handle_check_in():
     emit("checked_in", {"message" : "this worked"})
 
+# DEBUG ONLY: print db contents
 @app.route("/")
 def hello_world():
     users = db.session.execute(db.select(User)).scalars().all()
     users_string = ("\n").join([f"<h1>{user.to_dict()}</h1>" for user in users])
     return f"<h1>users: \n{users_string}</h1>\n<h2>session: {session}</h2>"
+
+# Using an `after_request` callback, we refresh any token that is within 30
+# minutes of expiring. Change the timedeltas to match the needs of your application.
+@app.after_request
+def refresh_expiring_jwts(response):
+    try:
+        exp_timestamp = get_jwt()["exp"]
+        now = datetime.now(timezone.utc)
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
+        if target_timestamp > exp_timestamp:
+            access_token = create_access_token(identity=get_jwt_identity())
+            set_access_cookies(response, access_token)
+        return response
+    except (RuntimeError, KeyError):
+        # Case where there is not a valid JWT. Just return the original response
+        return response
+
+# Register a callback function that takes whatever object is passed in as the
+# identity when creating JWTs and converts it to a JSON serializable format.
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return str(user.id)
+
+# Register a callback function that loads a user from your database whenever
+# a protected route is accessed. This should return any python object on a
+# successful lookup, or None if the lookup failed for any reason (for example
+# if the user has been deleted from the database).
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.query.filter_by(id=identity).one_or_none()
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -68,8 +115,21 @@ def login():
         return jsonify({"error": "Incorrect password"}), 401
     
     # TODO TOKEN
-    session["user"] = user.to_dict()
-    return jsonify(session["user"])
+    access_token = create_access_token(identity=user) # can pass user object due to jwt.user_identity_loader
+    csrf = get_csrf_token(access_token)
+    response = jsonify({"message": "Login successful from backend", "token": csrf})
+    try:
+        set_access_cookies(response, access_token)
+    except Exception as e:
+        print(f"error: {e}")
+        return jsonify({"error": "server-side"}), 500
+    return response
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    response = jsonify({"message": "Logout successful from backend"})
+    unset_jwt_cookies(response)
+    return response
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -79,17 +139,17 @@ def register():
     db.session.commit()    
 
     # TODO TOKEN
-    session["user"] = user.to_dict()
-    return jsonify(session["user"])
+    access_token = create_access_token(identity=data["username"])
+    return jsonify(access_token=access_token)
 
-@app.route("/user")
-def user():
-    if "user" not in session:
-        user = db.session.execute(db.select(User).filter_by(id=request.args.get("userId"))).scalar_one_or_none()
-        if not user:
-            return jsonify({"error": "User does not exist"})
-        session["user"] = user.to_dict()
-    return jsonify(session["user"])
+# Protect a route with jwt_required, which will kick out requests
+# without a valid JWT present.
+@app.route("/who_am_i", methods=["POST"])
+@jwt_required()
+def who_am_i():
+    # We can now access our sqlalchemy User object via `current_user`.
+    print(request.json)
+    return jsonify({"user": current_user.to_dict()})
 
 
 @app.route("/make-sol", methods=["GET"])
