@@ -21,18 +21,11 @@ export function CheckIn() {
     // socket.on("checked_in", (response) => alert(response.message));
   }
 
-  function handleClickLogin() {
-    navigate("/login");
-  }
-
   return (
     <>
       <div className="d-flex justify-content-left">
         <button className="btn btn-primary btn-lg" onClick={handleClickCheckIn}>
           Check In
-        </button>
-        <button className="btn btn-secondary btn-lg" onClick={handleClickLogin}>
-          Login
         </button>
       </div>
     </>

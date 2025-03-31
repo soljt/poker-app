@@ -4,14 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
 import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
-import axios from "axios";
-// import api from "../services/api";
-const api = "http://localhost:5000";
+import { auth_api } from "../services/api";
 
 // type for context
 type UserContextType = {
   user: User | null;
-  token: string | null;
   registerUser: (username: string, password: string) => void;
   loginUser: (username: string, password: string) => void;
   logout: () => void;
@@ -31,38 +28,28 @@ export const UserProvider = ({ children }: Props) => {
   const [user, setUser] = useState<User | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  //   function getCookie(name: string) {
-  //     const value = `; ${document.cookie}`;
-  //     const parts = value.split(`; ${name}=`);
-  //     if (parts.length === 2) return parts.pop()?.split(";").shift();
-  //   }
-
-  console.log(document.cookie);
+  function getCookie(name: string) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(";").shift();
+  }
 
   // on load, try to fetch user info from server
   useEffect(() => {
     const fetchMe = async () => {
       try {
+        const response = await auth_api.post("/who_am_i", {});
+        const token = getCookie("csrf_access_token");
         if (token) {
           setToken(token);
-          axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
+          auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         }
-        console.log("token:", token);
-
-        const response = await axios.post(
-          api + "/who_am_i",
-          {},
-          { withCredentials: true }
-        );
         const user = response.data.user; // user is a JSON object
         setUser(user);
-        setIsReady(true);
-      } catch (e) {
-        console.log(e);
+      } catch {
         setUser(null);
         setToken(null);
-        toast.error("Must be logged in");
-        // navigate("/login");
+        // toast.error("Could not get user, from: ");
       }
     };
     fetchMe();
@@ -74,16 +61,8 @@ export const UserProvider = ({ children }: Props) => {
     await registerAPI(username, password)
       .then((res) => {
         if (res) {
-          localStorage.setItem("token", res?.data.token);
-          const userObj = {
-            username: res?.data.username,
-            chips: res?.data.chips,
-          };
-          localStorage.setItem("user", JSON.stringify(userObj));
-          setToken(res?.data.token);
-          setUser(userObj);
-          toast.success("Register success");
-          navigate("/");
+          toast.success(res.data.message);
+          navigate("/login");
         }
       })
       .catch((e) => toast.warning("Server error occurred", e));
@@ -95,20 +74,10 @@ export const UserProvider = ({ children }: Props) => {
       .then((res) => {
         if (res) {
           console.log(res.data);
-          const token = res.data?.token;
-          setToken(token);
-          console.log("token before: ", token);
-          axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
-          console.log(axios.defaults.headers.common["X-CSRF-TOKEN"]);
-          //   localStorage.setItem("token", res?.data.token);
-          //   const userObj = {
-          //     username: res?.data.username,
-          //     chips: res?.data.chips,
-          //   };
-          //   localStorage.setItem("user", JSON.stringify(userObj));
-          //   setToken(res?.data.token);
-          //   setUser(userObj);
-          toast.success("Login success");
+          const token = getCookie("csrf_access_token");
+          setToken(token ? token : null);
+          auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+          toast.success(res.data.message);
           navigate("/");
         }
       })
@@ -122,17 +91,15 @@ export const UserProvider = ({ children }: Props) => {
   const logout = async () => {
     await logoutAPI().then((res) => {
       toast.success(res?.data.message);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
       setUser(null);
-      setToken("");
+      setToken(null);
       navigate("/");
     });
   };
 
   return (
     <UserContext.Provider
-      value={{ user, token, registerUser, loginUser, logout, isLoggedIn }}
+      value={{ user, registerUser, loginUser, logout, isLoggedIn }}
     >
       {
         isReady ? (

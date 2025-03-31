@@ -5,6 +5,7 @@ from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from game.game import PokerRound, Player
 from db import init_db, db, User
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 
@@ -19,7 +20,7 @@ init_db(app)
 app.config["JWT_SECRET_KEY"] = "Bru5$j^yeah"
 app.config["JWT_COOKIE_SECURE"] = False # DEBUG ONLY: set true when released
 app.config["JWT_COOKIE_SAMESITE"] = "Lax"
-app.config["JWT_CSRF_IN_COOKIES"] = False
+app.config["JWT_CSRF_IN_COOKIES"] = True
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
@@ -74,6 +75,8 @@ def hello_world():
     users_string = ("\n").join([f"<h1>{user.to_dict()}</h1>" for user in users])
     return f"<h1>users: \n{users_string}</h1>\n<h2>session: {session}</h2>"
 
+############################# AUTHENTICATION ##########################################
+
 # Using an `after_request` callback, we refresh any token that is within 30
 # minutes of expiring. Change the timedeltas to match the needs of your application.
 @app.after_request
@@ -105,7 +108,7 @@ def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(id=identity).one_or_none()
 
-@app.route("/login", methods=["POST"])
+@app.route("/auth/login", methods=["POST"])
 def login():
     data = request.json
     user = db.session.execute(db.select(User).filter_by(username=data["username"])).scalar_one_or_none()
@@ -116,8 +119,7 @@ def login():
     
     # TODO TOKEN
     access_token = create_access_token(identity=user) # can pass user object due to jwt.user_identity_loader
-    csrf = get_csrf_token(access_token)
-    response = jsonify({"message": "Login successful from backend", "token": csrf})
+    response = jsonify({"message": "Login successful from backend"})
     try:
         set_access_cookies(response, access_token)
     except Exception as e:
@@ -125,32 +127,42 @@ def login():
         return jsonify({"error": "server-side"}), 500
     return response
 
-@app.route("/logout", methods=["POST"])
+@app.route("/auth/logout", methods=["POST"])
 def logout():
     response = jsonify({"message": "Logout successful from backend"})
     unset_jwt_cookies(response)
     return response
 
-@app.route("/register", methods=["POST"])
+@app.route("/auth/register", methods=["POST"])
 def register():
     data = request.json
     new_usr = User(data["username"], data["chips"], data["password"]) 
-    db.session.add(new_usr)
-    db.session.commit()    
+    try:
+        db.session.add(new_usr)
+        db.session.commit()    
+    except IntegrityError as e:
+        return jsonify({"error": "Username taken"}), 500
 
-    # TODO TOKEN
-    access_token = create_access_token(identity=data["username"])
-    return jsonify(access_token=access_token)
+    # TODO TOKEN - OR MAYBE NOT - make the user enter their new details to login
+    # access_token = create_access_token(identity=data["username"])
+    response = jsonify({"message": "Registration successful from backend"})
+    # try:
+    #     set_access_cookies(response, access_token)
+    # except Exception as e:
+    #     print(f"error: {e}")
+    #     return jsonify({"error": "server-side"}), 500
+    return response
 
 # Protect a route with jwt_required, which will kick out requests
 # without a valid JWT present.
-@app.route("/who_am_i", methods=["POST"])
+@app.route("/auth/who_am_i", methods=["POST"])
 @jwt_required()
 def who_am_i():
     # We can now access our sqlalchemy User object via `current_user`.
     print(request.json)
     return jsonify({"user": current_user.to_dict()})
 
+######################### UTIL METHODS ######################################
 
 @app.route("/make-sol", methods=["GET"])
 def add_user():
@@ -158,6 +170,16 @@ def add_user():
     db.session.add(new_usr)
     db.session.commit()
     return f"<h1>SUCCESS</h1>"
+
+@app.route("/delete-users", methods=["GET"])
+def delete_users():
+    users = db.session.execute(db.select(User).filter(User.username.not_in(["soljt", "kenna"]))).scalars().fetchall()
+    for user in users:
+        db.session.delete(user)
+    
+    db.session.commit()
+    # db.session.commit()
+    return f"<h1>DELETED USERS:</h1>\n{"".join(f"<p>{user.username}</p>\n" for user in users)}"
 
 
 # @app.route("/<name>")
