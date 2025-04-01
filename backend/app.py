@@ -33,13 +33,17 @@ game = None
 
 @socketio.on("connect")
 def connect_handler(auth):
-    print(f"auth: {auth}")
+    print(f"New connection attempt with SID: {request.sid}")
     if not request.cookies:
         print("no cookies!")
         return False
     if not decode_token(request.cookies["access_token_cookie"], request.cookies["csrf_access_token"]):
         return False
     print(f"connected successfully with {request.sid}")
+
+@socketio.on("disconnect")
+def disconnect_handler():
+    print(f"closing connection with SID: {request.sid}")
 
 # @socketio.on("join")
 # def handle_join(data):

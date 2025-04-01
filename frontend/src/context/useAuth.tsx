@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useLayoutEffect, useRef, useState } from "react";
 import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -28,9 +28,15 @@ const UserContext = createContext<UserContextType>({} as UserContextType);
 // provider called once and then forgotten
 export const UserProvider = ({ children }: Props) => {
   const navigate = useNavigate();
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [token, setToken] = useState<string | null>(
+    getCookie("csrf_access_token") || null
+  );
+  const [user, setUser] = useState<User | null>(
+    localStorage.getItem("user")
+      ? JSON.parse(localStorage.getItem("user") || "") // would throw an error if we tried to JSON.parse("")
+      : null
+  );
+  const socket = useRef<Socket | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   function getCookie(name: string) {
@@ -40,30 +46,43 @@ export const UserProvider = ({ children }: Props) => {
   }
 
   // on load, try to fetch user info from server
-  useEffect(() => {
+  useLayoutEffect(() => {
     const fetchMe = async () => {
       try {
-        const response = await auth_api.post("/who_am_i", {});
-        const newToken = getCookie("csrf_access_token");
-        if (newToken && newToken !== token) {
-          setToken(newToken);
-          auth_api.defaults.headers.common["X-CSRF-TOKEN"] = newToken;
-          console.log("trying to connect socket");
-          socket?.disconnect();
-          setSocket(createSocket());
+        // see if we have the credentials
+        const token = getCookie("csrf_access_token");
+        auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+        const response = await auth_api.post("/who_am_i", {}); // can throw error
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        setUser(response.data.user);
+        // const user = response.data.user; // user is a JSON object
+        // setUser(user);
+
+        // // backend response may have set a new cookie
+        // const newToken = getCookie("csrf_access_token");
+        // if (newToken && newToken !== token) {
+        //   setToken(newToken);
+        //   auth_api.defaults.headers.common["X-CSRF-TOKEN"] = newToken;
+        // }
+
+        // logged in user needs a socket connection
+        if (!socket.current) {
+          socket.current = createSocket();
         }
-        const user = response.data.user; // user is a JSON object
-        setUser(user);
+        return true;
       } catch {
         setUser(null);
+        localStorage.setItem("user", "");
         setToken(null);
-        setSocket(null);
+        socket.current?.disconnect();
+        socket.current = null;
+        return false;
         // toast.error("Could not get user, from: ");
       }
     };
     fetchMe();
     setIsReady(true);
-  }, [socket, token]);
+  }, [token]);
 
   // register a new user
   const registerUser = async (username: string, password: string) => {
@@ -86,7 +105,7 @@ export const UserProvider = ({ children }: Props) => {
           const token = getCookie("csrf_access_token");
           setToken(token ? token : null);
           auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-          setSocket(createSocket());
+          socket.current = createSocket();
           toast.success(res.data.message);
         }
       })
@@ -101,7 +120,10 @@ export const UserProvider = ({ children }: Props) => {
     await logoutAPI().then((res) => {
       toast.success(res?.data.message);
       setUser(null);
+      localStorage.setItem("user", "");
       setToken(null);
+      socket.current?.disconnect();
+      socket.current = null;
       navigate("/");
     });
   };
@@ -111,7 +133,7 @@ export const UserProvider = ({ children }: Props) => {
       value={{
         user,
         token,
-        socket,
+        socket: socket.current,
         registerUser,
         loginUser,
         logout,
@@ -123,7 +145,7 @@ export const UserProvider = ({ children }: Props) => {
           children
         ) : (
           <div>Loading...</div>
-        ) /* necessary to deal with all the async/await - if it has children, it's ready */
+        ) /* necessary to deal with all the async/await - if it's ready, render the children */
       }
     </UserContext.Provider>
   );

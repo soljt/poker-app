@@ -7,7 +7,7 @@ import { useAuth } from "../context/useAuth.tsx";
 export default function Lobby() {
   const { socket } = useAuth();
   const navigate = useNavigate();
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(socket?.active || false);
 
   useEffect(() => {
     function onConnect() {

@@ -16,7 +16,6 @@ export default function App() {
       <UserProvider>
         <NavbarComponent />
         <ToastContainer />
-
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route
