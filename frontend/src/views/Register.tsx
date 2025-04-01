@@ -27,7 +27,7 @@ export default function Register() {
       <form onSubmit={handleRegister}>
         <h2>Create a new account!</h2>
         <div className="mb-3">
-          <label htmlFor="email" className="form-label">
+          <label htmlFor="username" className="form-label">
             Username :
           </label>
           <input
@@ -53,7 +53,7 @@ export default function Register() {
           />
         </div>
         <div className="mb-3">
-          <label htmlFor="password" className="form-label">
+          <label htmlFor="confirmPassword" className="form-label">
             Confirm Password :
           </label>
           <input

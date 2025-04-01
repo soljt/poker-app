@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, session, jsonify
-from flask_jwt_extended import create_access_token, current_user, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, current_user, decode_token, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
 from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from game.game import PokerRound, Player
@@ -19,9 +19,9 @@ init_db(app)
 # jwt (auth)
 app.config["JWT_SECRET_KEY"] = "Bru5$j^yeah"
 app.config["JWT_COOKIE_SECURE"] = False # DEBUG ONLY: set true when released
-app.config["JWT_COOKIE_SAMESITE"] = "Lax"
-app.config["JWT_CSRF_IN_COOKIES"] = True
-app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_COOKIE_SAMESITE"] = "Lax" # required for cookie inclusing in requests between diff domains
+app.config["JWT_CSRF_IN_COOKIES"] = True # send the csrf token via cookie so that the frontend can grab from browser
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"] # allows jwt in http-only cookie (protect against XSS attack)
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
 
@@ -31,42 +31,53 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 players = {}
 game = None
 
-@socketio.on("join")
-def handle_join(data):
-    """Handles when a user joins the game by submitting their username and chips."""
-    username = data["username"]
-    chips = data["chips"]
+@socketio.on("connect")
+def connect_handler(auth):
+    print(f"auth: {auth}")
+    if not request.cookies:
+        print("no cookies!")
+        return False
+    if not decode_token(request.cookies["access_token_cookie"], request.cookies["csrf_access_token"]):
+        return False
+    print(f"connected successfully with {request.sid}")
+
+# @socketio.on("join")
+# def handle_join(data):
+#     """Handles when a user joins the game by submitting their username and chips."""
+#     username = data["username"]
+#     chips = data["chips"]
     
-    if username in players:
-        emit("error", {"message": "Username already taken"})
-        return
+#     if username in players:
+#         emit("error", {"message": "Username already taken"})
+#         return
     
-    new_player = Player(username, chips)
-    players[username] = new_player
-    join_room(username)
+#     new_player = Player(username, chips)
+#     players[username] = new_player
+#     join_room(username)
     
-    emit("joined", {"message": f"Welcome, {username}!"}, room=username)
+#     emit("joined", {"message": f"Welcome, {username}!"}, room=username)
 
 
-@socketio.on("start_game")
-def handle_start_game():
-    """Host starts the game, and hands are dealt."""
-    global game
-    if len(players) < 2:
-        emit("error", {"message": "At least 2 players needed to start!"})
-        return
+# @socketio.on("start_game")
+# def handle_start_game():
+#     """Host starts the game, and hands are dealt."""
+#     global game
+#     if len(players) < 2:
+#         emit("error", {"message": "At least 2 players needed to start!"})
+#         return
 
-    game = PokerRound(list(players.values()), small_blind=5, big_blind=10)
-    game.deal_hands()
+#     game = PokerRound(list(players.values()), small_blind=5, big_blind=10)
+#     game.deal_hands()
 
-    for username, player in players.items():
-        cards = [str(card) for card in player.hole_cards]
-        emit("your_hand", {"cards": cards}, room=username)
-        print(cards)
+#     for username, player in players.items():
+#         cards = [str(card) for card in player.hole_cards]
+#         emit("your_hand", {"cards": cards}, room=username)
+#         print(cards)
 
 @socketio.on("check_in")
 def handle_check_in():
     emit("checked_in", {"message" : "this worked"})
+    print(f"got called by {request.sid}")
 
 # DEBUG ONLY: print db contents
 @app.route("/")
@@ -159,7 +170,6 @@ def register():
 @jwt_required()
 def who_am_i():
     # We can now access our sqlalchemy User object via `current_user`.
-    print(request.json)
     return jsonify({"user": current_user.to_dict()})
 
 ######################### UTIL METHODS ######################################

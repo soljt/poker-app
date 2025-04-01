@@ -1,18 +1,23 @@
-import { socket } from "../socket";
+import { useAuth } from "../context/useAuth";
 
 export function ConnectionManager() {
+  const { socket } = useAuth();
   function connect() {
-    socket.connect();
+    socket?.connect();
   }
 
   function disconnect() {
-    socket.disconnect();
+    socket?.disconnect();
   }
 
   return (
     <>
-      <button onClick={connect}>Connect</button>
-      <button onClick={disconnect}>Disconnect</button>
+      <button className="btn btn-primary btn-lg" onClick={connect}>
+        Connect
+      </button>
+      <button className="btn btn-dark btn-lg" onClick={disconnect}>
+        Disconnect
+      </button>
     </>
   );
 }

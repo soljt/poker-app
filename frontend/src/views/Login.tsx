@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { toast } from "react-toastify";
 import { handleError } from "../helpers/ErrorHandler";
@@ -7,16 +7,18 @@ import { handleError } from "../helpers/ErrorHandler";
 export default function Login() {
   const navigate = useNavigate();
   const { isLoggedIn, loginUser } = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     try {
       if (isLoggedIn()) {
-        navigate("/");
+        const redirectPath = location.state?.from?.pathname || "/";
+        navigate(redirectPath);
       }
     } catch {
       toast.warning("Something bad");
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, location.state?.from?.pathname, navigate]);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +38,7 @@ export default function Login() {
       <form onSubmit={handleLogin}>
         <h2>Login to your account</h2>
         <div className="mb-3">
-          <label htmlFor="email" className="form-label">
+          <label htmlFor="username" className="form-label">
             Username :
           </label>
           <input
@@ -46,6 +48,7 @@ export default function Login() {
             type="username"
             className="form-control"
             id="username"
+            autoComplete="username"
           />
         </div>
         <div className="mb-3">
@@ -59,6 +62,7 @@ export default function Login() {
             type="password"
             className="form-control"
             id="password"
+            autoComplete="true"
           />
         </div>
         <button type="submit" className="btn btn-primary">
