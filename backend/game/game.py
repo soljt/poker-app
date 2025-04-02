@@ -434,6 +434,22 @@ class PokerRound:
             player = player.left
         self.pot = PotCollection()
 
+    # getters for API
+    def get_player(self, username: str) -> Player:
+        player = self.table.btn
+        for _ in range(self.table.num_seats):
+            if player.name == username:
+                return player
+            player = player.left
+
+        return None
+
+    def get_player_hand(self, username: str) -> List[str]:
+        player = self.get_player(username)
+        if not player:
+            return None
+        return [str(card) for card in player.hole_cards]
+
     def deal_hands(self):
         """
         Deal each player 2 cards from the deck

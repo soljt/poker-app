@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from flask import Flask, request, session, jsonify
 from flask_jwt_extended import create_access_token, current_user, decode_token, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, send
 from flask_cors import CORS
 from game.game import PokerRound, Player
 from db import init_db, db, User
@@ -28,8 +28,8 @@ jwt = JWTManager(app)
 # sockets (game state)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-players = {}
-game = None
+games = {} # games[game_id] = {"players" : [], "host": str, "game": PokerRound} - "game" is not set until game is started by host
+active_users = {} # active_users[socket_sid] = {"username": str, "game_id": str} - user doesn't become "active" unless they're in a lobby
 
 @socketio.on("connect")
 def connect_handler(auth):
@@ -37,46 +37,149 @@ def connect_handler(auth):
     if not request.cookies:
         print("no cookies!")
         return False
-    if not decode_token(request.cookies["access_token_cookie"], request.cookies["csrf_access_token"]):
+    try: 
+        decoded = decode_token(request.cookies["access_token_cookie"], request.cookies["csrf_access_token"])   
+        user_id = decoded["sub"]
+        username = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none().username   
+        print(f"connected successfully with {request.sid}")
+        for key, dic in active_users.items():
+            if dic.get("username") == username:
+                del active_users[key]
+                active_users[request.sid] = dic
+                game_id = dic.get("game_id")
+                join_room(game_id)
+                emit("message", f"User {username} reconnected!", to=game_id)
+                break
+    except:
+        print("failed")
         return False
-    print(f"connected successfully with {request.sid}")
+
 
 @socketio.on("disconnect")
 def disconnect_handler():
     print(f"closing connection with SID: {request.sid}")
+    username = active_users.get(request.sid).get("username") # may not have joined a game
+    room = active_users.get(request.sid).get("game_id")
+    if username:
+        emit("error", {"message": f"User {username} disconnected :("}, to=room)
 
-# @socketio.on("join")
-# def handle_join(data):
-#     """Handles when a user joins the game by submitting their username and chips."""
-#     username = data["username"]
-#     chips = data["chips"]
+@socketio.on("join_game")
+def handle_join(data):
+    """Handles when a user joins the game by submitting their username and adding them to active users/game room"""
+    username = data.get("username")
+    game_id = data.get("game_id")
     
-#     if username in players:
-#         emit("error", {"message": "Username already taken"})
-#         return
+    if game_id not in games:
+        emit("error", {"message": "Game not found!"})
+        return
     
-#     new_player = Player(username, chips)
-#     players[username] = new_player
-#     join_room(username)
+    if username in games[game_id]["players"]:
+        emit("error", {"message": "You are already in this game!"})
+        return
     
-#     emit("joined", {"message": f"Welcome, {username}!"}, room=username)
+    active_users[request.sid] = {"username": username, "game_id": game_id}
+    games[game_id]["players"].append((username))
+    join_room(game_id)
+    
+    emit("player_joined", {"game_id": game_id, "username": username}, to=game_id)  # notify players in the room
 
+@socketio.on("leave_game")
+def handle_leave(data):
+    """Handles when a user leaves the game by removing them from active users/game room"""
+    username = data.get("username")
+    game_id = data.get("game_id")
+    
+    if game_id not in games:
+        emit("error", {"message": "Game not found!"})
+        return
+    
+    if username not in games[game_id]["players"]:
+        emit("error", {"message": "You aren't even in this game...how did you leave it??"})
+        return
+    
+    del active_users[request.sid]
+    games[game_id]["players"].remove(username)
+    leave_room(game_id)
+    
+    emit("player_left", {"game_id": game_id, "username": username}, to=game_id)  # notify players in the room
 
-# @socketio.on("start_game")
-# def handle_start_game():
-#     """Host starts the game, and hands are dealt."""
-#     global game
-#     if len(players) < 2:
-#         emit("error", {"message": "At least 2 players needed to start!"})
-#         return
+@socketio.on("create_game")
+def handle_create_game(data):
+    username = data.get("username")
+    game_id = f"game_{username}"
 
-#     game = PokerRound(list(players.values()), small_blind=5, big_blind=10)
-#     game.deal_hands()
+    if game_id in games:
+        emit("error", {"message": "You have already created a game."})
+        return
+    
+    active_users[request.sid] = {"username": username, "game_id": game_id}
+    games[game_id] = {"host" : username, "players": [username]}
+    join_room(game_id)
+    emit("game_created", {"game_id": game_id, "host": username}, broadcast=True) # all players can see
 
-#     for username, player in players.items():
-#         cards = [str(card) for card in player.hole_cards]
-#         emit("your_hand", {"cards": cards}, room=username)
-#         print(cards)
+@socketio.on("delete_game")
+def handle_delete_game(data):
+    username = data.get("username")
+    game_id = data.get("game_id")
+
+    if game_id not in games or games[game_id]["host"] != username:
+        emit("error", {"message": "You are not the host or game does not exist."})
+        return
+
+    # ugly inefficient removal from active_users - consider simply maintaining a mapping from sid to username
+    for username in games[game_id]["players"]:
+        for key, dic in active_users.items():
+            if dic.get("username") == username:
+                del active_users[key]
+                break
+    del games[game_id]
+    emit("message", f"Game {game_id} deleted!", to=game_id)
+    emit("game_deleted", {"game_id": game_id}, broadcast=True)
+
+@socketio.on("start_game")
+def handle_start_game(data):
+    """Host starts the game, and hands are dealt."""
+    game_id = data.get("game_id")
+    if not game_id or game_id not in games:
+        emit("error", {"message": "Invalid game_id"})
+
+    players = games[game_id]["players"]
+
+    if len(players) < 2:
+        emit("error", {"message": "At least 2 players needed to start!"})
+        return
+    
+    pokerPlayers = []
+    # create Player objects
+    for username in players:
+        try:
+            user = db.session.execute(db.select(User).filter_by(username=data["username"])).scalar_one_or_none()
+            newPlayer = Player(username, user.chips)
+            pokerPlayers.append(newPlayer)
+        except Exception as e:
+            emit("error", {"message": str(e)})
+            return
+
+    game = PokerRound(pokerPlayers, small_blind=5, big_blind=10)
+    game.deal_hands()
+    games[game_id]["game"] = game
+
+@socketio.on("get_hand")
+def handle_get_hand():
+    username = active_users.get(request.sid).get("username")
+    game_id = active_users.get(request.sid).get("game_id")
+    if not (username and game_id):
+        emit("error", {"message": "Could not find the user in active users"})
+        return
+
+    game = games[game_id]["game"]
+    hand = game.get_player_hand(username)
+    emit("my_hand", hand) # send it back as an array
+
+@socketio.on("get_games")
+def handle_get_games():
+    print(games)
+    emit("available_games", [{"game_id" : game_id, "host": games[game_id]["host"]} for game_id in games])
 
 @socketio.on("check_in")
 def handle_check_in():

@@ -11,13 +11,13 @@ export function ConnectionManager() {
   }
 
   return (
-    <>
+    <div className="align-items-center gap-3">
       <button className="btn btn-primary btn-lg" onClick={connect}>
         Connect
       </button>
       <button className="btn btn-dark btn-lg" onClick={disconnect}>
         Disconnect
       </button>
-    </>
+    </div>
   );
 }
