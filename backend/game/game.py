@@ -441,7 +441,6 @@ class PokerRound:
             if player.name == username:
                 return player
             player = player.left
-
         return None
 
     def get_player_hand(self, username: str) -> List[str]:

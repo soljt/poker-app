@@ -3,12 +3,14 @@ import { useAuth } from "../context/useAuth";
 const HostGameManager = () => {
   const { socket, user } = useAuth();
   function handleStartGame() {
-    socket?.emit("start_game");
+    socket?.emit("start_game", { game_id: localStorage.getItem("game_id") });
   }
 
   function handleCreateGame() {
     const username = user?.username;
-    socket?.emit("create_game", { username });
+    socket?.emit("create_game", { username }, (game_id: string) => {
+      localStorage.setItem("game_id", game_id);
+    });
   }
 
   return (

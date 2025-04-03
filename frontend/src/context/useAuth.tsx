@@ -120,7 +120,7 @@ export const UserProvider = ({ children }: Props) => {
     await logoutAPI().then((res) => {
       toast.success(res?.data.message);
       setUser(null);
-      localStorage.setItem("user", "");
+      localStorage.removeItem("user");
       setToken(null);
       socket.current?.disconnect();
       socket.current = null;

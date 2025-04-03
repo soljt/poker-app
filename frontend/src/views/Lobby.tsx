@@ -14,24 +14,30 @@ export default function Lobby() {
       navigate("/game");
     }
 
-    socket?.emit("get_games"); // Request list on load
-
-    socket?.on("available_games", (gameList) => {
-      console.log(gameList);
-      setGames(gameList);
-    });
+    socket?.emit(
+      "get_games",
+      (gameList: { game_id: string; host: string }[]) => {
+        console.log(gameList);
+        setGames(gameList);
+      }
+    ); // Request list on load
 
     socket?.on("game_created", (game) => {
       setGames((prev) => [...prev, game]); // Update game list when a new game is created
     });
 
     socket?.on("game_deleted", (game) => {
+      if (localStorage.getItem("game_id") === game.game_id) {
+        localStorage.removeItem("game_id");
+      }
       setGames((prev) => prev.filter((entry) => entry.game_id != game.game_id));
     });
 
     socket?.on("player_joined", (data) => {
       toast.info(`${data.username} joined ${data.game_id}`);
     });
+
+    // socket?.on("")
 
     socket?.on("game_started", startGame);
 
@@ -45,37 +51,60 @@ export default function Lobby() {
 
   const joinGame = (game_id: string) => {
     const username = user?.username;
-    socket?.emit("join_game", { game_id, username });
+    socket?.emit("join_game", { game_id, username }, (game_id: string) => {
+      localStorage.setItem("game_id", game_id);
+    });
   };
 
   const deleteGame = (game_id: string, username: string) => {
     socket?.emit("delete_game", { game_id, username });
   };
 
+  const leaveGame = (game_id: string, username: string) => {
+    socket?.emit("leave_game", { game_id, username }, () => {
+      localStorage.removeItem("game_id");
+    });
+  };
+
   return (
-    <div className="container p-3">
-      {user?.username === "soljt" ? <HostGameManager /> : <></>}
-      <ul>
-        {games.map((game) => (
-          <li key={game.game_id}>
-            {game.host}'s game{" "}
-            <button
-              className="btn btn-primary"
-              onClick={() => joinGame(game.game_id)}
-            >
-              Join
-            </button>
-            {game.host === user?.username && (
+    <>
+      {user?.username === "soljt" && (
+        <div className="container p-3">
+          <HostGameManager />
+        </div>
+      )}
+      <div className="container">
+        <ul className="list-group">
+          {games.map((game) => (
+            <li className="list-group-item" key={game.game_id}>
+              {game.host}'s game{" "}
               <button
-                className="btn btn-danger"
-                onClick={() => deleteGame(game.game_id, user.username)}
+                className="btn btn-primary"
+                onClick={() => joinGame(game.game_id)}
               >
-                Delete
+                Join
               </button>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+              {game.host === user?.username ? (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => deleteGame(game.game_id, user.username)}
+                >
+                  Delete
+                </button>
+              ) : (
+                <button
+                  className="btn btn-danger"
+                  onClick={() =>
+                    user?.username && leaveGame(game.game_id, user.username)
+                  }
+                >
+                  Leave Game
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }

@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import NavbarComponent from "./components/Navbar.tsx";
 import { UserProvider } from "./context/useAuth.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
+import Game from "./views/Game.tsx";
 
 export default function App() {
   return (
@@ -23,6 +24,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Lobby />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game"
+            element={
+              <ProtectedRoute>
+                <Game />
               </ProtectedRoute>
             }
           />
