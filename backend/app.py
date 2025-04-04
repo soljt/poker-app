@@ -197,7 +197,7 @@ def handle_start_game(data):
             return
 
     game = PokerRound(poker_players, small_blind=5, big_blind=10)
-    game.deal_hands()
+    game.deal_hands_and_take_blinds()
     games[game_id]["game"] = game
     emit("game_started", {"message": "Game started successfully"}, to=game_id)
 
@@ -228,6 +228,14 @@ def hello_world():
     users = db.session.execute(db.select(User)).scalars().all()
     users_string = ("\n").join([f"<h1>{user.to_dict()}</h1>" for user in users])
     return f"<h1>users: \n{users_string}</h1>\n<h2>session: {session}</h2>"
+
+# DEBUG ONLY: print current games
+@app.route("/print_games")
+def print_games():
+    lines = []
+    lines.append(f"<h4>game_ids: {[{game_id} for game_id in games]}</h4>")
+    lines.append(f"<h4>connected users: {[f"SID: {sid}, dict: {user_game}\n" for sid, user_game in connected_users.items()]}</h4>")
+    return "\n".join(lines)
 
 ############################# AUTHENTICATION ##########################################
 
@@ -338,30 +346,9 @@ def delete_users():
     # db.session.commit()
     return f"<h1>DELETED USERS:</h1>\n{"".join(f"<p>{user.username}</p>\n" for user in users)}"
 
-
-# @app.route("/<name>")
-# def hello_you(name):
-#     return f"<h1>this is nuts and insane lmao. your name: {name} </p>"
-
 # with app.test_request_context():
 #     print(url_for('hello_world'))
 #     print(url_for('hello_you', name='John Doe'))
-
-# game_state = {"round": None}
-
-# @app.route("/start_game", methods=["POST"])
-# def start_game():
-#     """Initialize a new round of poker."""
-#     game_state["round"] = PokerRound()
-#     return jsonify({"message": "Game started!"})
-
-# @app.route("/play", methods=["POST"])
-# def play_round():
-#     """Execute a round of poker."""
-#     if game_state["round"]:
-#         game_state["round"].play()
-#         return jsonify({"message": "Round played!"})
-#     return jsonify({"error": "No game started"}), 400
 
 if __name__ == "__main__":
     socketio.run(app, debug=True)

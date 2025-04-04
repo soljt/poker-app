@@ -434,6 +434,10 @@ class PokerRound:
             player = player.left
         self.pot = PotCollection()
 
+        # added for interfacing with API
+        self.current_player = None
+        self.last_to_act = None
+
     # getters for API
     def get_player(self, username: str) -> Player:
         player = self.table.btn
@@ -448,8 +452,17 @@ class PokerRound:
         if not player:
             return None
         return [str(card) for card in player.hole_cards]
+    
+    def get_pots(self) -> List[Pot]:
+        pots = []
+        curr_pot = self.pot.main_pot
+        while curr_pot:
+            pots.append(curr_pot)
+            curr_pot = curr_pot.next
+        return pots
+            
 
-    def deal_hands(self):
+    def deal_hands_and_take_blinds(self):
         """
         Deal each player 2 cards from the deck
         """
@@ -475,6 +488,9 @@ class PokerRound:
             
         print(f"POT: {self.pot}")
 
+        # set the current player and last to act
+        self.current_player, self.last_to_act = self.get_betting_order(preflop=True)
+
     def deal_board(self, num_cards: int):
         """
         Deal the specified number of cards to the board
@@ -491,14 +507,16 @@ class PokerRound:
         print(f"\n\nBOARD: {self.board}\n\n")
         print(f"POT: {self.pot}")
 
-    def collect_bets(self, preflop: bool, final_round = False) -> bool:
+    def collect_bets(self, preflop: bool, final_round: bool = False) -> bool:
         """
         Collect player bets
         returns: True when dealing should continue
                  False when there is no more possible action (only one remaining player can bet)
         """   
         # determine starting player and last-to-act based on placement of betting round in game (preflop vs post, headsup game vs full table)
+        # TODO will have to be done at the start of each betting round instead of here for Flask compatibility
         player, last_to_act = self.get_betting_order(preflop)
+        self.current_player = player
 
         # loop over all players
         while True: 
@@ -732,7 +750,7 @@ Type the letter(s) corresponding to your choice: """)
         Main game loop
         """
 
-        self.deal_hands()
+        self.deal_hands_and_take_blinds()
         # check whether game should continue (folded out or not) after each betting round:
         if(not self.collect_bets(preflop=True)):
             ranked_active_players = self.rank_active_players()
@@ -756,7 +774,7 @@ Type the letter(s) corresponding to your choice: """)
         # self.showdown()
 
     def get_to_showdown(self):
-        self.deal_hands()
+        self.deal_hands_and_take_blinds()
         self.deal_board(3)
         self.deal_board(1)
         self.deal_board(1)
@@ -778,7 +796,7 @@ class TestBettingFunctions(unittest.TestCase):
         player1 = Player('test1', 1000)
         player2 = Player('test2', 200)
         round = PokerRound([player1, player2], 150, 300)
-        round.deal_hands()
+        round.deal_hands_and_take_blinds()
         self.assertTrue(player2.allin)
         self.assertEqual(round.pot.main_pot.amount, 350)
 
@@ -991,7 +1009,7 @@ class TestPots(unittest.TestCase):
         p5 = Player("P5", 25000)
         round = PokerRound([p3, p4, p5, p1, p2], 0, 0)
         pot1 = round.pot.main_pot
-        round.deal_hands()
+        round.deal_hands_and_take_blinds()
         round.pot.add_contribution(p1, p1.bet(1000))
         round.pot.add_contribution(p2, p2.bet(500))
         self.assertEqual(pot1.player_contributions, {p4: 0, p5: 0, p1: 500, p2: 500})

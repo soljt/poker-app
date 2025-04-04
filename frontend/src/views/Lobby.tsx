@@ -51,9 +51,15 @@ export default function Lobby() {
 
   const joinGame = (game_id: string) => {
     const username = user?.username;
-    socket?.emit("join_game", { game_id, username }, (game_id: string) => {
-      localStorage.setItem("game_id", game_id);
-    });
+    socket?.emit(
+      "join_game",
+      { game_id, username },
+      (game_id: string | null) => {
+        if (game_id) {
+          localStorage.setItem("game_id", game_id);
+        }
+      }
+    );
   };
 
   const deleteGame = (game_id: string, username: string) => {
