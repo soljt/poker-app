@@ -101,7 +101,6 @@ export const UserProvider = ({ children }: Props) => {
     await loginAPI(username, password)
       .then((res) => {
         if (res) {
-          console.log(res.data);
           const token = getCookie("csrf_access_token");
           setToken(token ? token : null);
           auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;

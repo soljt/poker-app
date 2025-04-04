@@ -1,20 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
-from config import Config
-
-db = SQLAlchemy()  # Create a database instance
-
-def init_db(app):
-    """Initialize the database with the Flask app."""
-    app.config["SQLALCHEMY_DATABASE_URI"] = Config.SQLALCHEMY_DATABASE_URI  # SQLite file
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = Config.SQLALCHEMY_TRACK_MODIFICATIONS
-    print("DB INITIALIZED")
-    db.init_app(app)  # Bind database to the Flask app
-
-    with app.app_context():  # Create tables if they don't exist
-        print("TABLES CREATED")
-        db.create_all()
-
 from werkzeug.security import generate_password_hash, check_password_hash
+from app.db import db
 
 class User(db.Model):
     __tablename__ = "users"

@@ -5,11 +5,6 @@ export function ConnectionState({ socket }: { socket: Socket | null }) {
   const [isConnected, setIsConnected] = useState(socket?.active || false);
   useEffect(() => {
     setIsConnected(socket?.active || false);
-    console.log("called connection state useEffect");
-    socket?.on("test", () => console.log("test"));
-    return () => {
-      socket?.off("test");
-    };
   }, [socket]);
   return (
     <i

@@ -17,7 +17,6 @@ export default function Lobby() {
     socket?.emit(
       "get_games",
       (gameList: { game_id: string; host: string }[]) => {
-        console.log(gameList);
         setGames(gameList);
       }
     ); // Request list on load
