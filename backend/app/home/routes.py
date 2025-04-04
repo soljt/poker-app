@@ -1,7 +1,8 @@
 from app.home import home
 from app.db import db
 from app.models.user import User
-from app import games, connected_users, session
+from app.globals import games, connected_users
+from flask import session
 
 # DEBUG ONLY: print db contents
 @home.route("/")
