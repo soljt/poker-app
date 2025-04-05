@@ -8,3 +8,8 @@ export const auth_api = axios.create({
   baseURL: "http://localhost:5000/auth",
   withCredentials: true,
 });
+
+export const game_api = axios.create({
+  baseURL: "http://localhost:5000/game",
+  withCredentials: true,
+});

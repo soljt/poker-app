@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
 import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
-import { auth_api } from "../services/api";
+import { auth_api, game_api } from "../services/api";
 import { createSocket } from "../socket";
 import { Socket } from "socket.io-client";
 
@@ -52,31 +52,23 @@ export const UserProvider = ({ children }: Props) => {
         // see if we have the credentials
         const token = getCookie("csrf_access_token");
         auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+        game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         const response = await auth_api.post("/who_am_i", {}); // can throw error
         localStorage.setItem("user", JSON.stringify(response.data.user));
         setUser(response.data.user);
-        // const user = response.data.user; // user is a JSON object
-        // setUser(user);
-
-        // // backend response may have set a new cookie
-        // const newToken = getCookie("csrf_access_token");
-        // if (newToken && newToken !== token) {
-        //   setToken(newToken);
-        //   auth_api.defaults.headers.common["X-CSRF-TOKEN"] = newToken;
-        // }
 
         // logged in user needs a socket connection
         if (!socket.current) {
           socket.current = createSocket();
         }
-        return true;
       } catch {
+        // should only catch 401 unauth
         setUser(null);
-        localStorage.setItem("user", "");
+        localStorage.removeItem("user");
+        localStorage.removeItem("game_id"); // do not let the user store a game if they fail to auth
         setToken(null);
         socket.current?.disconnect();
         socket.current = null;
-        return false;
         // toast.error("Could not get user, from: ");
       }
     };

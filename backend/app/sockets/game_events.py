@@ -4,7 +4,7 @@ from app.extensions import socketio
 from app.globals import connected_users, games
 from app.db import db
 from app.models.user import User
-from app.game.game import PokerRound, Player
+from app.game_logic.game_logic import PokerRound, Player
 
 @socketio.on("start_game")
 def handle_start_game(data):

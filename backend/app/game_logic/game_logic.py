@@ -258,9 +258,17 @@ class Table:
             player.reset()
             player = player.left
 
+    def get_players(self) -> List[str]:
+        players = []
+        curr_player = self.btn
+        while curr_player.left != self.btn:
+            players.append(str(curr_player))
+            curr_player = curr_player.left
+        return players
+
 class Pot:
     def __init__(self):
-        self.player_contributions = {}
+        self.player_contributions = {} # {player: contribution}
         self.amount = 0
         self.next = None
         self.contribution_limit = sys.maxsize # no limit until a player goes all-in
@@ -314,6 +322,12 @@ class Pot:
             player.chips += share
             print(f"{player} gets {share}")
         print(f"-------------------------")
+
+    def serialize(self):
+        return {
+            "amount": self.amount,
+            "players": [str(player) for player in self.player_contributions]
+        }
 
     def __repr__(self):
         return f"POT:\n{self.amount}\n{[(player.name, self.player_contributions[player]) for player in self.player_contributions]}"
@@ -439,6 +453,8 @@ class PokerRound:
         self.last_to_act = None
 
     # getters for API
+
+    # helper to get a player object by username
     def get_player(self, username: str) -> Player:
         player = self.table.btn
         for _ in range(self.table.num_seats):
@@ -453,13 +469,28 @@ class PokerRound:
             return None
         return [str(card) for card in player.hole_cards]
     
-    def get_pots(self) -> List[Pot]:
+    def get_pots(self) -> List[dict[str, int | List[str]]]: # [{"amount": ---, "players": [---, ---, ---]}, {...}]
         pots = []
         curr_pot = self.pot.main_pot
         while curr_pot:
-            pots.append(curr_pot)
+            pots.append(curr_pot.serialize())
             curr_pot = curr_pot.next
         return pots
+    
+    def get_board(self) -> List[str]:
+        return [str(card) for card in self.board]
+    
+    def serialize_for_player(self, username: str) -> dict[str, List[int] | List[str] | str | List[dict[str, int | List[str]]]]:
+        return {
+            "blinds": [self.sb_amount, self.bb_amount],
+            "my_cards": self.get_player_hand(username),
+            "board": self.get_board(),
+            "players": self.table.get_players(), # starting from btn
+            "pots": self.get_pots(),
+            "small_blind_player": str(self.table.sb),
+            "big_blind_player": str(self.table.bb),
+            "player_to_act": str(self.current_player)
+        }
             
 
     def deal_hands_and_take_blinds(self):

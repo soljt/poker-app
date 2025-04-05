@@ -5,6 +5,7 @@ from app.globals import connected_users, games
 from flask_jwt_extended import decode_token
 from app.models.user import User
 from app.db import db
+from app.sockets.lobby_events import handle_delete_game
 
 
 @socketio.on("connect")
@@ -47,14 +48,17 @@ def disconnect_handler(reason):
         username = connected_users.get(request.sid).get("username")
         room = connected_users.get(request.sid).get("game_id")
 
-        # if the user logged off intentionally
         # TODO: handle disconnection from active game...remove the player? what
         # could use reason.SERVER_DISCONNECT to detect when server kicks due to inactivity
+
+        # if the user logged off intentionally
         if reason == SocketIO.reason.CLIENT_DISCONNECT:
             if room:
-                games[room].remove(username)
+                games[room]["players"].remove(username)
                 emit("error", {"message": f"User {username} logged off"}, to=room)
                 leave_room(room)
+                if username == games[room]["host"]:
+                    handle_delete_game({"game_id": room})
             del connected_users[request.sid]
         
         # if they logged off, hopefully with the intent to reconnect...

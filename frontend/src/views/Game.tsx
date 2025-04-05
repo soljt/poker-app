@@ -1,29 +1,43 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/useAuth";
+import { game_api } from "../services/api";
+import { handleError } from "../helpers/ErrorHandler";
+import { toast } from "react-toastify";
+import PokerGamePage from "../components/PokerGamePage";
+import { GameData } from "../types";
 
 const Game = () => {
-  const [hand, setHand] = useState<string[]>([]);
-  const { socket } = useAuth();
-  useEffect(() => {
-    console.log("Hand updated:", hand);
-  }, [hand]); // Runs whenever hand changes
+  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // should also handle REDIRECTING user if they have no "game_id" localStorage or
+  // if they are not in the game they try to join
 
   useEffect(() => {
-    // Listen for the player's hand
-    socket?.emit("get_hand", (cards: string[]) => {
-      setHand(cards);
-    });
-  }, [socket]);
+    try {
+      game_api
+        .get("/state", { params: { game_id: localStorage.getItem("game_id") } })
+        .then((response) => {
+          if (response.data.error) {
+            toast.warn(response.data.error);
+            setErrorMessage(response.data.error);
+          } else {
+            setGameData(response.data);
+          }
+        });
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
 
   return (
-    <div className="container">
-      <h4>My Hand:</h4>
-      <ul>
-        {hand.map((card, i) => (
-          <li key={"card " + i}>{card}</li>
-        ))}
-      </ul>
-    </div>
+    <>
+      {gameData && <PokerGamePage gameData={gameData} />}
+      <div className="container">
+        <h4 className="text-center" style={{ color: "red" }}>
+          {errorMessage}
+        </h4>
+      </div>
+    </>
   );
 };
 

@@ -4,7 +4,7 @@ from flask_cors import CORS
 from .extensions import jwt, socketio
 from flask_jwt_extended import create_access_token, current_user, decode_token, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, set_access_cookies, unset_jwt_cookies
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from app.game.game import PokerRound, Player
+from app.game_logic.game_logic import PokerRound, Player
 from app.db import init_db, db
 from app.models.user import User
 from sqlalchemy.exc import IntegrityError
@@ -35,9 +35,11 @@ def create_app(config_class=Config):
     from app.home import home as home_bp
     from app.auth import auth as auth_bp
     from app.util import util as util_bp
+    from app.game import game as game_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(util_bp)
+    app.register_blueprint(game_bp)
 
     return app
 
