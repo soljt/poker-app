@@ -463,10 +463,11 @@ class PokerRound:
             player = player.left
         return None
 
-    def get_player_hand(self, username: str) -> List[str]:
-        player = self.get_player(username)
-        if not player:
-            return None
+    def get_player_hand(self, player: str | Player) -> List[str]:
+        if isinstance(player, str):
+            player = self.get_player(player)
+            if not player:
+                return None
         return [str(card) for card in player.hole_cards]
     
     def get_pots(self) -> List[dict[str, int | List[str]]]: # [{"amount": ---, "players": [---, ---, ---]}, {...}]
@@ -481,18 +482,21 @@ class PokerRound:
         return [str(card) for card in self.board]
     
     def serialize_for_player(self, username: str) -> dict[str, List[int] | List[str] | str | List[dict[str, int | List[str]]]]:
+        player = self.get_player(username)
         return {
             "blinds": [self.sb_amount, self.bb_amount],
-            "my_cards": self.get_player_hand(username),
+            "my_cards": self.get_player_hand(player),
             "board": self.get_board(),
             "players": self.table.get_players(), # starting from btn
             "pots": self.get_pots(),
             "small_blind_player": str(self.table.sb),
             "big_blind_player": str(self.table.bb),
-            "player_to_act": str(self.current_player)
+            "player_to_act": str(self.current_player),
+            "my_bet": player.current_bet,
+            "table_bet": self.current_bet,
+            "my_chips": player.chips
         }
             
-
     def deal_hands_and_take_blinds(self):
         """
         Deal each player 2 cards from the deck

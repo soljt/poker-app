@@ -1,6 +1,7 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { PokerGameProps } from "../types";
+import { useAuth } from "../context/useAuth";
 
 const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
   const {
@@ -13,6 +14,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
     big_blind_player,
     player_to_act,
   } = gameData;
+  const { user } = useAuth();
 
   return (
     <div className="container my-4">
@@ -87,6 +89,27 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
               ) : (
                 <span className="text-muted">No cards on board yet</span>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <div className="card text-bg-light mb-3">
+            <div className="card-header">My Stack & Bankroll</div>
+            <div className="card-body">
+              <p>My Chips (at the table): {gameData.my_chips}</p>
+              <p>Wallet: {user?.chips}</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="card text-bg-light mb-3">
+            <div className="card-header">This Betting Round</div>
+            <div className="card-body">
+              <p>My Bet: {gameData.my_bet}</p>
+              <p>Table Bet: {gameData.table_bet}</p>
             </div>
           </div>
         </div>

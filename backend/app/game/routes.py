@@ -19,6 +19,7 @@ def get_game_state():
         return jsonify({"error": f"Could not find user {username} in player list for game_id {game_id}."})
     
     response = games[game_id]["game"].serialize_for_player(username)
+    print(response)
     try:
         response = jsonify(response)
     except Exception as e:

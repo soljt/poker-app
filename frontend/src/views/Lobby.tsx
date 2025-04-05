@@ -10,7 +10,8 @@ export default function Lobby() {
   const [games, setGames] = useState<{ game_id: string; host: string }[]>([]);
 
   useEffect(() => {
-    function startGame() {
+    function startGame(message: string) {
+      toast.success(message);
       navigate("/game");
     }
 
@@ -38,7 +39,7 @@ export default function Lobby() {
 
     // socket?.on("")
 
-    socket?.on("game_started", startGame);
+    socket?.on("game_started", (message) => startGame(message));
 
     return () => {
       socket?.off("game_created");
