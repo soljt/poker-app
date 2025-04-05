@@ -451,6 +451,7 @@ class PokerRound:
         # added for interfacing with API
         self.current_player = None
         self.last_to_act = None
+        self.betting_round_over = False
 
     # getters for API
 
@@ -497,21 +498,19 @@ class PokerRound:
             "my_chips": player.chips
         }
             
-    def deal_hands_and_take_blinds(self):
+    def start_round(self):
         """
-        Deal each player 2 cards from the deck
+        Deal the hands, extract the blinds, set the current player
         """
+        # deal each player 2 cards from the deck
         player = self.table.sb
-
-        player_hole_cards = {}
-
         for i in range(self.table.num_seats):
             player.hole_cards = self.deck.deal(2)
             player.determine_best_hand(self.board)
             print(f"{player.name} got dealt: {player.hole_cards}")
-            player_hole_cards[player.name] = []
             player = player.left
 
+        # extract the blinds
         self.pot.add_contribution(self.table.sb, self.table.sb.bet(self.sb_amount)) # may be less than the SB amount
         print(f"{self.table.sb.name} is the SB, betting {self.table.sb.current_bet}")
 
@@ -525,6 +524,41 @@ class PokerRound:
 
         # set the current player and last to act
         self.current_player, self.last_to_act = self.get_betting_order(preflop=True)
+
+    def get_player_to_act(self):
+        player = self.current_player
+        while True: 
+            # skip players who have folded or are already allin
+            if (player.folded or player.allin):
+                if self.last_to_act == player:
+                    self.betting_round_over = True
+                    return None
+                player = player.left
+                continue
+
+##################################################################################################################################################
+            # TODO maybe handle this somewhere else?? seems messy here - e.g. check this after a player goes all-in or at the end of a turn
+            # and then maybe set an instance variable to skip further betting rounds?
+
+            # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
+            if (len(self.active_players) - len(self.allin_players)) == 1 and player.current_bet == self.current_bet: 
+                    self.betting_round_over = True
+                    return None
+##################################################################################################################################################
+            
+            # if they haven't folded, aren't all-in, and come before the last_to_act
+            return player
+    def get_player_to_act_and_actions(self):
+        player = self.get_player_to_act()
+        actions = self.get_player_available_actions(player)
+        return {"player_to_act": player.name, "available_actions": actions}
+
+    def handle_player_action(self, player, action, amount=None):
+        # validate
+        pass
+        # apply
+
+        # update
 
     def deal_board(self, num_cards: int):
         """
@@ -604,32 +638,36 @@ class PokerRound:
         returns: First and last players to act
         """
         if preflop:
+            last_to_act = self.table.bb
             if self.heads_up:
                 starting_player = self.table.sb
             else:
                 starting_player = self.table.bb.left
-            last_to_act = self.table.bb
+            
         else:
+            last_to_act = self.table.btn
             if self.heads_up:
                 starting_player = self.table.bb
             else:
                 starting_player = self.table.sb
-            last_to_act = self.table.btn
+            
         return starting_player, last_to_act
     
-    def determine_player_options(self, player: Player) -> Tuple[str, int]:
+    def get_player_available_actions(self, player: Player, min_multiplier: int=2) -> List[str, int]:
         """
-        Decide which options to present to player and call prompt_player
+        Decide which options to present to player
         returns: (action: str, amount: int)
         action is a one-letter code according to self.ACTIONS
         amount is 0 for call, check, and fold
         """
+        # TODO make it return a list of {"action": str, "min": int, "allin": bool}
+        minimum = min_multiplier*self.current_bet
         if self.current_bet > 0:
             if self.current_bet == player.current_bet: # really only happens in preflop
-                return ["check", "reraise"]
+                return [{"action": "check", "min": None, "allin": False}, {"action": "reraise", "min": minimum, "allin": False}]
             else:
                 if player.chips + player.current_bet <= self.current_bet: # player doesn't have enough to raise (or possibly to call)
-                    return ["call (allin)", "fold"]
+                    return [{"action": "call", "min": None, "allin": True}, {"action": "fold", "min": None, "allin": False}]
                 elif (len(self.active_players) - len(self.allin_players)) == 1:
                     return ["call", "fold"]
                 elif player.chips + player.current_bet <= 2*self.current_bet: # player doesn't have enough to min-raise
@@ -674,7 +712,7 @@ Type the letter(s) corresponding to your choice: """)
         """
         Packaged functionality for readability
         """
-        options = self.determine_player_options(player)
+        options = self.get_player_available_actions(player)
         return self.prompt_player(player, options)
     
     def handle_fold(self, player: Player):
@@ -785,7 +823,7 @@ Type the letter(s) corresponding to your choice: """)
         Main game loop
         """
 
-        self.deal_hands_and_take_blinds()
+        self.start_round()
         # check whether game should continue (folded out or not) after each betting round:
         if(not self.collect_bets(preflop=True)):
             ranked_active_players = self.rank_active_players()
@@ -809,7 +847,7 @@ Type the letter(s) corresponding to your choice: """)
         # self.showdown()
 
     def get_to_showdown(self):
-        self.deal_hands_and_take_blinds()
+        self.start_round()
         self.deal_board(3)
         self.deal_board(1)
         self.deal_board(1)
@@ -831,7 +869,7 @@ class TestBettingFunctions(unittest.TestCase):
         player1 = Player('test1', 1000)
         player2 = Player('test2', 200)
         round = PokerRound([player1, player2], 150, 300)
-        round.deal_hands_and_take_blinds()
+        round.start_round()
         self.assertTrue(player2.allin)
         self.assertEqual(round.pot.main_pot.amount, 350)
 
@@ -1044,7 +1082,7 @@ class TestPots(unittest.TestCase):
         p5 = Player("P5", 25000)
         round = PokerRound([p3, p4, p5, p1, p2], 0, 0)
         pot1 = round.pot.main_pot
-        round.deal_hands_and_take_blinds()
+        round.start_round()
         round.pot.add_contribution(p1, p1.bet(1000))
         round.pot.add_contribution(p2, p2.bet(500))
         self.assertEqual(pot1.player_contributions, {p4: 0, p5: 0, p1: 500, p2: 500})

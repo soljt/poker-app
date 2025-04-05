@@ -39,7 +39,7 @@ export default function Lobby() {
 
     // socket?.on("")
 
-    socket?.on("game_started", (message) => startGame(message));
+    socket?.on("game_started", (data) => startGame(data.message));
 
     return () => {
       socket?.off("game_created");

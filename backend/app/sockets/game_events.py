@@ -33,9 +33,10 @@ def handle_start_game(data):
             return
 
     game = PokerRound(poker_players, small_blind=5, big_blind=10)
-    game.deal_hands_and_take_blinds()
+    game.start_round()
     games[game_id]["game"] = game
     emit("game_started", {"message": "Game started successfully"}, to=game_id)
+    player, actions = game.get_player_to_act_and_actions()
 
 @socketio.on("get_hand")
 def handle_get_hand():
