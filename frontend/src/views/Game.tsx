@@ -3,11 +3,16 @@ import { game_api } from "../services/api";
 import { handleError } from "../helpers/ErrorHandler";
 import { toast } from "react-toastify";
 import PokerGamePage from "../components/PokerGamePage";
-import { GameData } from "../types";
+import { GameData, PlayerTurnData, ActionItem } from "../types";
+import { useAuth } from "../context/useAuth";
+import PlayerActionPanel from "../components/PlayerActionPanel";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [playerToAct, setPlayerToAct] = useState("");
+  const [actionList, setActionList] = useState<Array<ActionItem> | null>(null);
+  const { socket, user } = useAuth();
 
   // should also handle REDIRECTING user if they have no "game_id" localStorage or
   // if they are not in the game they try to join
@@ -22,6 +27,9 @@ const Game = () => {
             setErrorMessage(response.data.error);
           } else {
             setGameData(response.data);
+            setPlayerToAct(response.data.player_to_act);
+            setActionList(response.data.available_actions);
+            console.log("available actions:", response.data.available_actions);
           }
         });
     } catch (error) {
@@ -29,9 +37,52 @@ const Game = () => {
     }
   }, []);
 
+  const handlePlayerTurn = (data: PlayerTurnData) => {
+    console.log("received:", data);
+    setPlayerToAct(data.player_to_act);
+    setActionList(data.available_actions);
+  };
+
+  const updateGameState = (data: GameData) => {
+    console.log("updating game state:", data);
+    setGameData(data);
+  };
+
+  useEffect(() => {
+    console.log("Socket status:", socket?.connected);
+    socket?.on("player_turn", handlePlayerTurn);
+    socket?.on("update_game_state", updateGameState);
+    return () => {
+      socket?.off("player_turn", handlePlayerTurn);
+      socket?.off("update_game_state");
+    };
+  }, [socket]);
+
   return (
     <>
       {gameData && <PokerGamePage gameData={gameData} />}
+      {user?.username === playerToAct && (
+        <PlayerActionPanel
+          availableActions={
+            actionList || [{ action: "Nothing", min: 0, allin: false }]
+          }
+          onActionSelect={(action: string, amount?: number) => {
+            socket?.emit("player_action", {
+              player: user.username,
+              action,
+              amount: amount ?? null,
+            });
+            console.log(
+              "sent to backend...player:",
+              user.username,
+              "action:",
+              action,
+              "amount:",
+              amount ?? null
+            );
+          }}
+        />
+      )}
       <div className="container">
         <h4 className="text-center" style={{ color: "red" }}>
           {errorMessage}

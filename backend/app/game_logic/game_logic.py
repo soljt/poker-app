@@ -1,8 +1,10 @@
 import itertools
 import random
 import sys
+from types import NoneType
 import unittest
-from typing import List, Tuple, Union, Set
+from typing import List, Tuple, Union
+from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
 
 class Card:
     RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -261,10 +263,11 @@ class Table:
     def get_players(self) -> List[str]:
         players = []
         curr_player = self.btn
-        while curr_player.left != self.btn:
+        while True:
             players.append(str(curr_player))
             curr_player = curr_player.left
-        return players
+            if curr_player.left != self.btn:
+                return players
 
 class Pot:
     def __init__(self):
@@ -452,6 +455,7 @@ class PokerRound:
         self.current_player = None
         self.last_to_act = None
         self.betting_round_over = False
+        self.phase = None
 
     # getters for API
 
@@ -482,8 +486,14 @@ class PokerRound:
     def get_board(self) -> List[str]:
         return [str(card) for card in self.board]
     
+    def get_players(self) -> List[str]:
+        return self.table.get_players()
+    
     def serialize_for_player(self, username: str) -> dict[str, List[int] | List[str] | str | List[dict[str, int | List[str]]]]:
         player = self.get_player(username)
+        data = self.get_player_to_act_and_actions()
+        player_to_act = data["player_to_act"]
+        actions = data["available_actions"]
         return {
             "blinds": [self.sb_amount, self.bb_amount],
             "my_cards": self.get_player_hand(player),
@@ -492,11 +502,13 @@ class PokerRound:
             "pots": self.get_pots(),
             "small_blind_player": str(self.table.sb),
             "big_blind_player": str(self.table.bb),
-            "player_to_act": str(self.current_player),
+            "player_to_act": player_to_act,
+            "available_actions": actions,
             "my_bet": player.current_bet,
             "table_bet": self.current_bet,
             "my_chips": player.chips
         }
+
             
     def start_round(self):
         """
@@ -523,42 +535,102 @@ class PokerRound:
         print(f"POT: {self.pot}")
 
         # set the current player and last to act
+        self.phase = "preflop"
         self.current_player, self.last_to_act = self.get_betting_order(preflop=True)
-
-    def get_player_to_act(self):
+        
+    def get_player_to_act_and_actions(self):
         player = self.current_player
+        actions = self.get_player_available_actions(player)
+        return {"player_to_act": player.name, "available_actions": actions}
+
+    def validate_player_action(self, player: Player, action: str, amount: int | None):
+        if not self.current_player == player:
+            raise NotPlayersTurnError(player)
+        available_actions = self.get_player_available_actions(player)
+        if action not in [dic["action"] for dic in available_actions]:
+            raise InvalidActionError(action)
+        if amount and amount < [dic.get("min") for dic in available_actions if dic["action"] == action][0]:
+            # if they chose raise/bet etc. but didn't have enough to min-raise, put them all in
+            raise InvalidAmountError(amount)
+        
+    def apply_player_action(self, player: Player, action: str, amount: int | None):
+        # folded players are no longer active
+        if action == "fold":
+            player.folded = True
+            self.active_players.remove(player)
+            if len(self.active_players) == 1:
+                return False # all players but one have folded
+        
+        # handle call
+        elif action == "call":
+            self.pot.add_contribution(player, player.bet(self.current_bet))
+
+        # handle bets
+        elif action in ["raise", "reraise", "bet"]:
+            self.handle_raise(player, amount)
+            self.last_to_act = player.right # used to determine when to stop looping (when everyone has called the bet)
+            # if final_round:
+            #     self.final_betting_round_aggressor = player
+        
+        # DEBUG
+        print(f"{player.name} now has {player.chips} and is in for {player.current_bet}. All in? {player.allin}")
+
+    def update_game_state(self):
+        # update game state and move on to next player unless the round is over
+        print(f"POT: {self.pot}")
+        if self.current_player.allin:
+            self.allin_players.add(self.current_player)
+        if self.last_to_act == self.current_player:
+            self.betting_round_over = True
+            return
+        
+        # start looking for the NEXT player
+        player = self.current_player.left 
         while True: 
             # skip players who have folded or are already allin
             if (player.folded or player.allin):
                 if self.last_to_act == player:
                     self.betting_round_over = True
-                    return None
+                    return
                 player = player.left
                 continue
 
-##################################################################################################################################################
             # TODO maybe handle this somewhere else?? seems messy here - e.g. check this after a player goes all-in or at the end of a turn
             # and then maybe set an instance variable to skip further betting rounds?
-
             # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
             if (len(self.active_players) - len(self.allin_players)) == 1 and player.current_bet == self.current_bet: 
                     self.betting_round_over = True
-                    return None
-##################################################################################################################################################
+                    return
             
-            # if they haven't folded, aren't all-in, and come before the last_to_act
-            return player
-    def get_player_to_act_and_actions(self):
-        player = self.get_player_to_act()
-        actions = self.get_player_available_actions(player)
-        return {"player_to_act": player.name, "available_actions": actions}
+            # if they haven't folded, aren't all-in
+            self.current_player = player
+            break
 
-    def handle_player_action(self, player, action, amount=None):
-        # validate
-        pass
-        # apply
-
-        # update
+    def start_next_phase(self):
+        if self.phase == "preflop":
+            self.deal_board(3)
+            self.phase = "flop"
+        elif self.phase == "flop":
+            self.deal_board(1)
+            self.phase = "river"
+        elif self.phase == "river":
+            # i have no idea
+            pass
+        
+    def handle_player_action(self, username: str, action: str, amount=None):
+        try:
+            # validate
+            player = self.get_player(username)
+            self.validate_player_action(player, action, amount) # throws exception if not
+            # apply
+            self.apply_player_action(player, action, amount)
+            # update
+            self.update_game_state()
+            if self.betting_round_over:
+                self.end_betting_round()
+                self.start_next_phase()
+        except Exception as e:
+            raise e
 
     def deal_board(self, num_cards: int):
         """
@@ -653,32 +725,49 @@ class PokerRound:
             
         return starting_player, last_to_act
     
-    def get_player_available_actions(self, player: Player, min_multiplier: int=2) -> List[str, int]:
+    def get_player_available_actions(self, player: Player, min_multiplier: int=2) -> dict[str, str | int | NoneType]:
         """
         Decide which options to present to player
-        returns: (action: str, amount: int)
-        action is a one-letter code according to self.ACTIONS
-        amount is 0 for call, check, and fold
+        returns: [{"action": str, "min": int, "allin": bool}, ...]
         """
-        # TODO make it return a list of {"action": str, "min": int, "allin": bool}
         minimum = min_multiplier*self.current_bet
         if self.current_bet > 0:
             if self.current_bet == player.current_bet: # really only happens in preflop
                 return [{"action": "check", "min": None, "allin": False}, {"action": "reraise", "min": minimum, "allin": False}]
             else:
                 if player.chips + player.current_bet <= self.current_bet: # player doesn't have enough to raise (or possibly to call)
-                    return [{"action": "call", "min": None, "allin": True}, {"action": "fold", "min": None, "allin": False}]
-                elif (len(self.active_players) - len(self.allin_players)) == 1:
-                    return ["call", "fold"]
+                    return [
+                        {"action": "call", "min": None, "allin": True}, 
+                        {"action": "fold", "min": None, "allin": False}
+                        ]
+                elif (len(self.active_players) - len(self.allin_players)) == 1: # player shouldn't raise - they're the only player left to act
+                    return [
+                        {"action": "call", "min": None, "allin": False}, 
+                        {"action": "fold", "min": None, "allin": False}
+                        ]
                 elif player.chips + player.current_bet <= 2*self.current_bet: # player doesn't have enough to min-raise
-                    return ["call", "raise (allin)", "fold"]         
+                    return [
+                        {"action": "call", "min": None, "allin": False}, 
+                        {"action": "raise", "min": player.chips + player.current_bet, "allin": True}, 
+                        {"action": "fold", "min": None, "allin": False}
+                        ]         
                 else: # player is rich
-                    return ["call", "raise", "fold"]
+                    return [
+                        {"action": "call", "min": None, "allin": False}, 
+                        {"action": "raise", "min": minimum, "allin": False}, 
+                        {"action": "fold", "min": None, "allin": False}
+                        ]
         else: # no one has bet yet
-            if player.chips < self.bb_amount:
-                return ["check", "bet (allin)"]
+            if player.chips < self.bb_amount: # weird case...should be CALL?
+                return [
+                    {"action": "check", "min": None, "allin": False}, 
+                    {"action": "bet", "min": player.chips, "allin": True}
+                    ]
             else:
-                return ["check", "bet"]
+                return [
+                    {"action": "check", "min": None, "allin": False}, 
+                    {"action": "bet", "min": minimum, "allin": False}
+                    ]
 
     def prompt_player(self, player: Player, options: List[str]) -> Tuple[str, int]:
         """

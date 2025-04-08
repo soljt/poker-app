@@ -36,6 +36,7 @@ def connect_handler(auth):
         
         # if this is the first connection, add user to connected_users
         connected_users[request.sid] = {"username": username, "game_id": None}
+        join_room(username)
     except:
         print("failed")
         return False

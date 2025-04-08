@@ -10,17 +10,17 @@ export default function Lobby() {
   const [games, setGames] = useState<{ game_id: string; host: string }[]>([]);
 
   useEffect(() => {
-    function startGame(message: string) {
-      toast.success(message);
-      navigate("/game");
-    }
-
     socket?.emit(
       "get_games",
       (gameList: { game_id: string; host: string }[]) => {
         setGames(gameList);
       }
     ); // Request list on load
+
+    const startGame = (data: { message: string }) => {
+      toast.success(data.message);
+      navigate("/game");
+    };
 
     socket?.on("game_created", (game) => {
       setGames((prev) => [...prev, game]); // Update game list when a new game is created
@@ -39,7 +39,7 @@ export default function Lobby() {
 
     // socket?.on("")
 
-    socket?.on("game_started", (data) => startGame(data.message));
+    socket?.on("game_started", startGame);
 
     return () => {
       socket?.off("game_created");

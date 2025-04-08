@@ -7,6 +7,7 @@ export interface GameData {
   small_blind_player: string;
   big_blind_player: string;
   player_to_act: string;
+  available_actions: ActionItem[]
   my_bet: number;
   table_bet: number;
   my_chips: number;
@@ -15,3 +16,14 @@ export interface GameData {
   export interface PokerGameProps {
     gameData: GameData;
   }
+
+  export interface ActionItem {
+    action: string, min: number | null, allin: boolean
+  }
+  export interface PlayerTurnData {
+    player_to_act: string;
+    available_actions: ActionItem[]
+  }
+
+
+    

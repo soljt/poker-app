@@ -6,6 +6,18 @@ from app.db import db
 from app.models.user import User
 from app.game_logic.game_logic import PokerRound, Player
 
+class UserValidationError(Exception):
+    def __init__(self, reason="Could not find the user in active users"):
+        super().__init__(f"{reason}")
+        self.reason = reason
+
+def validate_player():
+    username = connected_users.get(request.sid).get("username")
+    game_id = connected_users.get(request.sid).get("game_id")
+    if not (username and game_id):
+        raise UserValidationError
+    return username, game_id
+
 @socketio.on("start_game")
 def handle_start_game(data):
     """Host starts the game, and hands are dealt."""
@@ -36,7 +48,25 @@ def handle_start_game(data):
     game.start_round()
     games[game_id]["game"] = game
     emit("game_started", {"message": "Game started successfully"}, to=game_id)
-    player, actions = game.get_player_to_act_and_actions()
+    data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
+    emit("player_turn", data, to=game_id)
+
+@socketio.on("player_action")
+def handle_player_action(data):
+    try:
+        username, game_id = validate_player()
+        game = games[game_id]["game"]
+        print(f"data received on player {username} action:", data)
+        game.handle_player_action(username, data.get("action"), data.get("amount"))
+        for name in game.get_players():
+            game_state = game.serialize_for_player(name)
+            emit("update_game_state", game_state, to=name)
+        data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
+        emit("player_turn", data, to=game_id)
+    except Exception as e:
+        emit("error", {"message": str(e)})
+        return
+
 
 @socketio.on("get_hand")
 def handle_get_hand():

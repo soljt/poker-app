@@ -1,4 +1,10 @@
-import { createContext, useLayoutEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -76,61 +82,62 @@ export const UserProvider = ({ children }: Props) => {
     setIsReady(true);
   }, [token]);
 
-  // register a new user
-  const registerUser = async (username: string, password: string) => {
-    await registerAPI(username, password)
-      .then((res) => {
-        if (res) {
-          toast.success(res.data.message);
-          navigate("/login");
-        }
-      })
-      .catch((e) => toast.warning("Server error occurred", e));
-  };
+  const contextValue = useMemo(() => {
+    // register a new user
+    const registerUser = async (username: string, password: string) => {
+      await registerAPI(username, password)
+        .then((res) => {
+          if (res) {
+            toast.success(res.data.message);
+            navigate("/login");
+          }
+        })
+        .catch((e) => toast.warning("Server error occurred", e));
+    };
 
-  // login the user
-  const loginUser = async (username: string, password: string) => {
-    await loginAPI(username, password)
-      .then((res) => {
-        if (res) {
-          const token = getCookie("csrf_access_token");
-          setToken(token ? token : null);
-          auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-          socket.current = createSocket();
-          toast.success(res.data.message);
-        }
-      })
-      .catch((e) => toast.warning("Server error occurred", e));
-  };
+    // login the user
+    const loginUser = async (username: string, password: string) => {
+      await loginAPI(username, password)
+        .then((res) => {
+          if (res) {
+            const token = getCookie("csrf_access_token");
+            setToken(token ? token : null);
+            auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+            socket.current = createSocket();
+            toast.success(res.data.message);
+          }
+        })
+        .catch((e) => toast.warning("Server error occurred", e));
+    };
 
-  const isLoggedIn = () => {
-    return !!user;
-  };
+    const isLoggedIn = () => {
+      return !!user;
+    };
 
-  const logout = async () => {
-    await logoutAPI().then((res) => {
-      toast.success(res?.data.message);
-      setUser(null);
-      localStorage.removeItem("user");
-      setToken(null);
-      socket.current?.disconnect();
-      socket.current = null;
-      navigate("/");
-    });
-  };
+    const logout = async () => {
+      await logoutAPI().then((res) => {
+        toast.success(res?.data.message);
+        setUser(null);
+        localStorage.removeItem("user");
+        setToken(null);
+        socket.current?.disconnect();
+        socket.current = null;
+        navigate("/");
+      });
+    };
+    return {
+      user,
+      token,
+      socket: socket.current,
+      registerUser,
+      loginUser,
+      logout,
+      isLoggedIn,
+    };
+  }, [user, token, navigate]);
 
   return (
-    <UserContext.Provider
-      value={{
-        user,
-        token,
-        socket: socket.current,
-        registerUser,
-        loginUser,
-        logout,
-        isLoggedIn,
-      }}
-    >
+    <UserContext.Provider value={contextValue}>
       {
         isReady ? (
           children
