@@ -303,7 +303,7 @@ class Pot:
             self.contribution_limit = self.player_contributions[player]
         return 0
 
-    def award_pot(self, ranked_active_players: List[List[Player]]):
+    def award_pot(self, ranked_active_players: List[List[Player]]) -> dict[str, list[str] | int]:
         """
         Given a hand-ranking of active players, award pot to the best-handed player(s) involved in the pot.
         """
@@ -325,8 +325,9 @@ class Pot:
             player.chips += share
             print(f"{player} gets {share}")
         print(f"-------------------------")
+        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share}
 
-    def serialize(self):
+    def serialize(self) -> dict[str, int | list[str]]:
         return {
             "amount": self.amount,
             "players": [str(player) for player in self.player_contributions]
@@ -403,16 +404,18 @@ class PotCollection:
         
         self.current_pot = curr # update current pot to be the final pot after a round
 
-    def award_pot(self, ranked_active_players: List[List[Player]]):
+    def award_pot(self, ranked_active_players: List[List[Player]]) -> list[dict[str, list[str] | int]]:
         """
         Given a hand-ranked list of players, award the pot(s) to the best player(s) in it (them)
         """
         print(f"----------------------POT COLLECTION--------------------------")
+        pot_award_info = []
         pot = self.main_pot
         while pot:         
-            pot.award_pot(ranked_active_players)
+            pot_award_info.append(pot.award_pot(ranked_active_players))
             pot = pot.next
         print('-' * 80)
+        return pot_award_info
 
     def __repr__(self):
         curr = self.main_pot
@@ -454,8 +457,10 @@ class PokerRound:
         # added for interfacing with API
         self.current_player = None
         self.last_to_act = None
-        self.betting_round_over = False
+        self.is_betting_round_over = False
         self.phase = None
+        self.is_action_finished = False
+        self.is_poker_round_over = False
 
     # getters for API
 
@@ -506,7 +511,8 @@ class PokerRound:
             "available_actions": actions,
             "my_bet": player.current_bet,
             "table_bet": self.current_bet,
-            "my_chips": player.chips
+            "my_chips": player.chips,
+            "phase": self.phase
         }
 
             
@@ -559,7 +565,9 @@ class PokerRound:
             player.folded = True
             self.active_players.remove(player)
             if len(self.active_players) == 1:
-                return False # all players but one have folded
+                self.is_betting_round_over = True # TODO idk if we need this
+                self.is_action_finished = True # all players but one have folded
+                self.is_poker_round_over = True # no need to see more cards
         
         # handle call
         elif action == "call":
@@ -567,7 +575,10 @@ class PokerRound:
 
         # handle bets
         elif action in ["raise", "reraise", "bet"]:
-            self.handle_raise(player, amount)
+            # player may not have enough to raise by the amount they specified
+            self.pot.add_contribution(player, player.bet(amount))
+            # in case player cannot raise the amount they specified (goes allin)
+            self.current_bet = max(player.current_bet, self.current_bet) 
             self.last_to_act = player.right # used to determine when to stop looping (when everyone has called the bet)
             # if final_round:
             #     self.final_betting_round_aggressor = player
@@ -581,7 +592,7 @@ class PokerRound:
         if self.current_player.allin:
             self.allin_players.add(self.current_player)
         if self.last_to_act == self.current_player:
-            self.betting_round_over = True
+            self.is_betting_round_over = True
             return
         
         # start looking for the NEXT player
@@ -590,7 +601,7 @@ class PokerRound:
             # skip players who have folded or are already allin
             if (player.folded or player.allin):
                 if self.last_to_act == player:
-                    self.betting_round_over = True
+                    self.is_betting_round_over = True
                     return
                 player = player.left
                 continue
@@ -599,7 +610,8 @@ class PokerRound:
             # and then maybe set an instance variable to skip further betting rounds?
             # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
             if (len(self.active_players) - len(self.allin_players)) == 1 and player.current_bet == self.current_bet: 
-                    self.betting_round_over = True
+                    self.is_action_finished = True
+                    self.is_betting_round_over = True
                     return
             
             # if they haven't folded, aren't all-in
@@ -612,10 +624,17 @@ class PokerRound:
             self.phase = "flop"
         elif self.phase == "flop":
             self.deal_board(1)
+            self.phase = "turn"
+        elif self.phase == "turn":
+            self.deal_board(1)
             self.phase = "river"
         elif self.phase == "river":
-            # i have no idea
-            pass
+            self.is_action_finished = True
+            self.is_poker_round_over = True
+            return
+            
+        self.is_betting_round_over = False
+        self.current_player, self.last_to_act = self.get_betting_order(preflop=False)
         
     def handle_player_action(self, username: str, action: str, amount=None):
         try:
@@ -626,11 +645,24 @@ class PokerRound:
             self.apply_player_action(player, action, amount)
             # update
             self.update_game_state()
-            if self.betting_round_over:
+            if self.is_betting_round_over:
                 self.end_betting_round()
                 self.start_next_phase()
         except Exception as e:
             raise e
+        
+    def end_poker_round(self): 
+        """
+        Called when: action is over. Must decide whether more cards must be dealt or pot can be awarded directly
+        """
+        if not self.is_action_finished:
+            raise Exception("ACTION IS NOT FINISHED, CANNOT CALL END ROUND")
+        if not self.is_poker_round_over:
+            self.deal_board(5 - len(self.board))
+
+        ranked_active_players = self.rank_active_players()
+        pot_award_info = self.pot.award_pot(ranked_active_players)
+        return pot_award_info
 
     def deal_board(self, num_cards: int):
         """

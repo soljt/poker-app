@@ -19,7 +19,8 @@ def connect_handler(auth):
         user_id = decoded["sub"]
         username = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none().username   
         print(f"connected successfully with {request.sid}")
-
+        print(f"from global_events.py: {request.sid} joined room: {username}")
+        join_room(username)
         # check to see if user is reconnecting under different sid
         for key, dic in connected_users.items():
             if dic.get("username") == username:
@@ -36,7 +37,6 @@ def connect_handler(auth):
         
         # if this is the first connection, add user to connected_users
         connected_users[request.sid] = {"username": username, "game_id": None}
-        join_room(username)
     except:
         print("failed")
         return False

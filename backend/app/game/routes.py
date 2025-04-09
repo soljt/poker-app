@@ -28,4 +28,27 @@ def get_game_state():
         return jsonify({"error", "not serializeable"})
     
     return response
+
+@game.route("/host", methods=["GET"])
+@jwt_required()
+def get_game_host():
+    game_id = request.args.get("game_id")
+    username = current_user.username
+
+    if not game_id in games:
+        return jsonify({"error": "Game does not exist."})
+    
+    if not username in games.get(game_id).get("players"):
+        return jsonify({"error": f"Could not find user {username} in player list for game_id {game_id}."})
+    
+    response = {"host": games[game_id]["host"]}
+    try:
+        response = jsonify(response)
+    except Exception as e:
+        print("\n\nERROR FROM GET GAME STATE")
+        print(e)
+        print("\n\n")
+        return jsonify({"error", "not serializeable"})
+    
+    return response
     

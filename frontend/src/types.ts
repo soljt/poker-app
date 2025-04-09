@@ -11,6 +11,7 @@ export interface GameData {
   my_bet: number;
   table_bet: number;
   my_chips: number;
+  phase: string;
 }
   
   export interface PokerGameProps {
@@ -23,6 +24,10 @@ export interface GameData {
   export interface PlayerTurnData {
     player_to_act: string;
     available_actions: ActionItem[]
+  }
+
+  export interface PotAwardItem {
+    winners: string[], amount: number, share: number
   }
 
 

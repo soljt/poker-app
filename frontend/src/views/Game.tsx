@@ -3,15 +3,19 @@ import { game_api } from "../services/api";
 import { handleError } from "../helpers/ErrorHandler";
 import { toast } from "react-toastify";
 import PokerGamePage from "../components/PokerGamePage";
-import { GameData, PlayerTurnData, ActionItem } from "../types";
-import { useAuth } from "../context/useAuth";
 import PlayerActionPanel from "../components/PlayerActionPanel";
+import RoundOverOverlay from "../components/RoundOverOverlay";
+import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
+import { useAuth } from "../context/useAuth";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [playerToAct, setPlayerToAct] = useState("");
   const [actionList, setActionList] = useState<Array<ActionItem> | null>(null);
+  const [showRoundOver, setShowRoundOver] = useState(false);
+  const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
+  const [host, setHost] = useState("");
   const { socket, user } = useAuth();
 
   // should also handle REDIRECTING user if they have no "game_id" localStorage or
@@ -37,6 +41,23 @@ const Game = () => {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      game_api
+        .get("/host", { params: { game_id: localStorage.getItem("game_id") } })
+        .then((response) => {
+          if (response.data.error) {
+            toast.warn(response.data.error);
+            setErrorMessage(response.data.error);
+          } else {
+            setHost(response.data.host);
+          }
+        });
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
+
   const handlePlayerTurn = (data: PlayerTurnData) => {
     console.log("received:", data);
     setPlayerToAct(data.player_to_act);
@@ -48,19 +69,37 @@ const Game = () => {
     setGameData(data);
   };
 
+  const handleStartNextRound = () => {
+    socket?.emit("start_next_round");
+    setShowRoundOver(false);
+    setPotAwards([]);
+  };
+
   useEffect(() => {
     console.log("Socket status:", socket?.connected);
     socket?.on("player_turn", handlePlayerTurn);
     socket?.on("update_game_state", updateGameState);
+    socket?.on("round_over", (data: PotAwardItem[]) => {
+      setPotAwards(data);
+      setShowRoundOver(true);
+    });
     return () => {
       socket?.off("player_turn", handlePlayerTurn);
       socket?.off("update_game_state");
+      socket?.off("round_over");
     };
   }, [socket]);
 
   return (
     <>
       {gameData && <PokerGamePage gameData={gameData} />}
+      <RoundOverOverlay
+        show={showRoundOver}
+        potAwards={potAwards}
+        onClose={() => setShowRoundOver(false)}
+        isHost={host === user?.username} // determine based on logged-in user
+        onStartNextRound={handleStartNextRound}
+      />
       {user?.username === playerToAct && (
         <PlayerActionPanel
           availableActions={

@@ -60,9 +60,18 @@ def handle_player_action(data):
         game.handle_player_action(username, data.get("action"), data.get("amount"))
         for name in game.get_players():
             game_state = game.serialize_for_player(name)
+            print(f"emitting game state to {name}: {game_state}")
             emit("update_game_state", game_state, to=name)
-        data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
-        emit("player_turn", data, to=game_id)
+        if not game.is_action_finished:
+            data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {...}]}
+            emit("player_turn", data, to=game_id)
+        else:
+            pot_award_info = game.end_poker_round() # [{"winners": list[str], "amount": int, "share": int}, {...}]
+            for name in game.get_players(): # additional update to show newly dealt cards if needed
+                game_state = game.serialize_for_player(name)
+                print(f"emitting game state to {name}: {game_state}")
+                emit("update_game_state", game_state, to=name)
+            emit("round_over", pot_award_info, to=game_id)
     except Exception as e:
         emit("error", {"message": str(e)})
         return

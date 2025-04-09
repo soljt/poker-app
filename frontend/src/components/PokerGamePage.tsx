@@ -13,12 +13,16 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
     small_blind_player,
     big_blind_player,
     player_to_act,
+    my_bet,
+    my_chips,
+    phase,
+    table_bet,
   } = gameData;
   const { user } = useAuth();
 
   return (
     <div className="container my-4">
-      <h2 className="text-center mb-4">Poker Game</h2>
+      <h2 className="text-center mb-4">Poker Game{phase && `: ${phase}`}</h2>
 
       <div className="row mb-4">
         <div className="col-md-4">
@@ -99,7 +103,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
           <div className="card text-bg-light mb-3">
             <div className="card-header">My Stack & Bankroll</div>
             <div className="card-body">
-              <p>My Chips (at the table): {gameData.my_chips}</p>
+              <p>My Chips (at the table): {my_chips}</p>
               <p>Wallet: {user?.chips}</p>
             </div>
           </div>
@@ -108,8 +112,8 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
           <div className="card text-bg-light mb-3">
             <div className="card-header">This Betting Round</div>
             <div className="card-body">
-              <p>My Bet: {gameData.my_bet}</p>
-              <p>Table Bet: {gameData.table_bet}</p>
+              <p>My Bet: {my_bet}</p>
+              <p>Table Bet: {table_bet}</p>
             </div>
           </div>
         </div>
