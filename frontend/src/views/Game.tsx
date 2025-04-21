@@ -100,6 +100,7 @@ const Game = () => {
         isHost={host === user?.username} // determine based on logged-in user
         onStartNextRound={handleStartNextRound}
       />
+
       {user?.username === playerToAct && (
         <PlayerActionPanel
           availableActions={

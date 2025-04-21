@@ -4,7 +4,9 @@ from app.models.user import User
 
 @util.route("/make-sol", methods=["GET"])
 def add_user():
-    new_usr = User("kenna", 1000, "ilovemybf") # soljt password: pass
+    new_usr = User("soljt", 1000, "pass", "admin")
+    db.session.add(new_usr)
+    new_usr = User("kenna", 500, "ilovemybf", "player") # soljt password: pass
     db.session.add(new_usr)
     db.session.commit()
     return f"<h1>SUCCESS</h1>"

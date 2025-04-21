@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, ListGroup, Button } from "react-bootstrap";
+import { ListGroup, Button } from "react-bootstrap";
 
 import { PotAwardItem } from "../types";
 
@@ -14,55 +14,58 @@ type RoundOverOverlayProps = {
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   show,
   potAwards,
-  onClose,
   isHost,
   onStartNextRound,
 }) => {
+  if (!show) return null;
   return (
-    <Modal show={show} onHide={onClose} centered backdrop="static">
-      <Modal.Header closeButton>
-        <Modal.Title>Round Over</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <ListGroup>
-          {potAwards.map((pot, index) => {
-            const isMainPot = index === 0;
-            const isSplit = pot.winners.length > 1;
-
-            return (
-              <ListGroup.Item key={index}>
-                <strong>
-                  {isMainPot ? "Main Pot" : `Side Pot ${index}`}: {pot.amount}{" "}
-                  chips
-                </strong>
-                <br />
-                {isSplit ? (
-                  <>
-                    Split between: {pot.winners.join(", ")}
-                    <br />
-                    Each gets: {pot.share} chips
-                  </>
-                ) : (
-                  <>
-                    Winner: {pot.winners[0]}
-                    <br />
-                    Amount: {pot.amount} chips
-                  </>
-                )}
-              </ListGroup.Item>
-            );
-          })}
-        </ListGroup>
-
-        {isHost && (
-          <div className="d-grid mt-4">
-            <Button variant="success" onClick={onStartNextRound}>
-              Start Next Round
-            </Button>
-          </div>
-        )}
-      </Modal.Body>
-    </Modal>
+    <div
+      className="position-fixed top-0 start-50 translate-middle-x bg-white shadow p-3 rounded"
+      style={{
+        marginTop: "1rem",
+        zIndex: 1050,
+        maxWidth: "90%",
+        width: "400px",
+        border: "1px solid #ccc",
+      }}
+    >
+      <h5 className="text-center">Round Over</h5>
+      <ListGroup className="mb-3">
+        {potAwards.map((pot, index) => {
+          const isMainPot = index === 0;
+          const isSplit = pot.winners.length > 1;
+          return (
+            <ListGroup.Item key={index}>
+              <strong>
+                {isMainPot ? "Main Pot" : `Side Pot ${index}`}: {pot.amount}{" "}
+                chips
+              </strong>
+              <br />
+              {isSplit ? (
+                <>
+                  Split between: {pot.winners.join(", ")}
+                  <br />
+                  Each gets: {pot.share} chips
+                </>
+              ) : (
+                <>
+                  Winner: {pot.winners[0]}
+                  <br />
+                  Amount: {pot.amount} chips
+                </>
+              )}
+            </ListGroup.Item>
+          );
+        })}
+      </ListGroup>
+      {isHost && (
+        <div className="d-grid">
+          <Button variant="success" onClick={onStartNextRound}>
+            Start Next Round
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 

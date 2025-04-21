@@ -58,10 +58,10 @@ def handle_create_game(data):
         emit("error", {"message": "You have already created a game."})
         return
     
-    connected_users[request.sid] = {"username": username, "game_id": game_id}
+    connected_users[request.sid] = {"username": username, "game_id": game_id} # TODO remove the username overwrite
     games[game_id] = {"host" : username, "players": [username]}
     join_room(game_id)
-    emit("game_created", {"game_id": game_id, "host": username}, broadcast=True) # all players can see
+    emit("game_created", {"game_id": game_id, "host": username, "players": [username for username in games[game_id]["players"]]}, broadcast=True) # all players can see
     return game_id
 
 @socketio.on("delete_game")
@@ -87,4 +87,4 @@ def handle_delete_game(data):
 
 @socketio.on("get_games")
 def handle_get_games():
-    return [{"game_id" : game_id, "host": games[game_id]["host"]} for game_id in games]
+    return [{"game_id" : game_id, "host": games[game_id]["host"], "players": [username for username in games[game_id]["players"]]} for game_id in games]

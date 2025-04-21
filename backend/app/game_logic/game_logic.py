@@ -619,6 +619,8 @@ class PokerRound:
             break
 
     def start_next_phase(self):
+        if self.is_action_finished or self.is_poker_round_over: # TODO handle this better
+            return
         if self.phase == "preflop":
             self.deal_board(3)
             self.phase = "flop"

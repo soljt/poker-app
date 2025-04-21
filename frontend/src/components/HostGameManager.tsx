@@ -2,9 +2,6 @@ import { useAuth } from "../context/useAuth";
 
 const HostGameManager = () => {
   const { socket, user } = useAuth();
-  function handleStartGame() {
-    socket?.emit("start_game", { game_id: localStorage.getItem("game_id") });
-  }
 
   function handleCreateGame() {
     const username = user?.username;
@@ -15,12 +12,11 @@ const HostGameManager = () => {
 
   return (
     <div className="vstack gap-3">
-      <button className="btn btn-lg btn-info" onClick={handleCreateGame}>
-        Create Game
-      </button>
-      <button className="btn btn-lg btn-success" onClick={handleStartGame}>
-        Start Game
-      </button>
+      {!localStorage.getItem("game_id") && (
+        <button className="btn btn-lg btn-info" onClick={handleCreateGame}>
+          Create Game
+        </button>
+      )}
     </div>
   );
 };

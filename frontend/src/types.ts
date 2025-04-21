@@ -30,5 +30,17 @@ export interface GameData {
     winners: string[], amount: number, share: number
   }
 
+  export interface LobbyEntry {
+   game_id: string; 
+   host: string;
+   players: string[]; 
+  }
+
+  export enum Roles {
+    player = "player",
+    host = "host",
+    admin = "admin"
+  }
+
 
     

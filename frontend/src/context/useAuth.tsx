@@ -13,6 +13,10 @@ import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
 import { auth_api, game_api } from "../services/api";
 import { createSocket } from "../socket";
 import { Socket } from "socket.io-client";
+import {
+  handleSocketError,
+  handleSocketMessage,
+} from "../helpers/SocketAlertHandler";
 
 // type for context
 type UserContextType = {
@@ -66,6 +70,9 @@ export const UserProvider = ({ children }: Props) => {
         // logged in user needs a socket connection
         if (!socket.current) {
           socket.current = createSocket();
+          // Handle global socket errors
+          socket.current?.on("error", handleSocketError);
+          socket.current?.on("message", handleSocketMessage);
         }
       } catch {
         // should only catch 401 unauth
@@ -78,8 +85,13 @@ export const UserProvider = ({ children }: Props) => {
         // toast.error("Could not get user, from: ");
       }
     };
+
     fetchMe();
     setIsReady(true);
+    return () => {
+      socket.current?.off("error", handleSocketError);
+      socket.current?.off("message", handleSocketMessage);
+    };
   }, [token]);
 
   const contextValue = useMemo(() => {

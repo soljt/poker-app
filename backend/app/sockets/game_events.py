@@ -33,6 +33,8 @@ def handle_start_game(data):
         emit("error", {"message": "At least 2 players needed to start!"})
         return
     
+    print(data, "got past len")
+    
     poker_players = []
     # create Player objects
     for username in player_names:
