@@ -1,6 +1,6 @@
 from flask_jwt_extended import (
     current_user, get_jwt,
-    create_access_token, jwt_required, set_access_cookies
+    create_access_token, get_jwt_identity, jwt_required, set_access_cookies
 )
 from datetime import datetime, timedelta, timezone
 from app.models.user import User
@@ -8,14 +8,13 @@ from app.extensions import jwt
 
 # Using an `after_request` callback, we refresh any token that is within 30
 # minutes of expiring.
-@jwt_required()
 def refresh_expiring_jwts(response):
     try:
         exp_timestamp = get_jwt()["exp"]
         now = datetime.now(timezone.utc)
         target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
         if target_timestamp > exp_timestamp:
-            access_token = create_access_token(identity=current_user)
+            access_token = create_access_token(identity=User.query.filter_by(id=get_jwt_identity).one_or_none())
             set_access_cookies(response, access_token)
         return response
     except (RuntimeError, KeyError):
