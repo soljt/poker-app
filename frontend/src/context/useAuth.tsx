@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -56,43 +50,46 @@ export const UserProvider = ({ children }: Props) => {
   }
 
   // on load, try to fetch user info from server
-  useLayoutEffect(() => {
+  useEffect(() => {
     const fetchMe = async () => {
       try {
         // see if we have the credentials
-        const token = getCookie("csrf_access_token");
+        const token = getCookie("csrf_access_token") || null;
         auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         const response = await auth_api.post("/who_am_i", {}); // can throw error
         localStorage.setItem("user", JSON.stringify(response.data.user));
         setUser(response.data.user);
-
-        // logged in user needs a socket connection
-        if (!socket.current) {
-          socket.current = createSocket();
-          // Handle global socket errors
-          socket.current?.on("error", handleSocketError);
-          socket.current?.on("message", handleSocketMessage);
-        }
+        setToken(token);
       } catch {
         // should only catch 401 unauth
         setUser(null);
         localStorage.removeItem("user");
         localStorage.removeItem("game_id"); // do not let the user store a game if they fail to auth
         setToken(null);
-        socket.current?.disconnect();
-        socket.current = null;
-        // toast.error("Could not get user, from: ");
       }
     };
-
     fetchMe();
     setIsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!user || !token || socket.current) return;
+
+    socket.current = createSocket();
+    // Handle global socket errors
+    socket.current?.on("error", handleSocketError);
+    socket.current?.on("message", handleSocketMessage);
+    console.log("listeners created for socket error and message events");
+
     return () => {
       socket.current?.off("error", handleSocketError);
       socket.current?.off("message", handleSocketMessage);
+      socket.current?.disconnect();
+      socket.current = null;
+      console.log("listeners destroyed and socket killed");
     };
-  }, [token]);
+  }, [user, token]);
 
   const contextValue = useMemo(() => {
     // register a new user
@@ -110,12 +107,16 @@ export const UserProvider = ({ children }: Props) => {
     // login the user
     const loginUser = async (username: string, password: string) => {
       await loginAPI(username, password)
-        .then((res) => {
+        .then(async (res) => {
           if (res) {
             const token = getCookie("csrf_access_token");
             setToken(token ? token : null);
             auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-            socket.current = createSocket();
+            game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+
+            const res = await auth_api.post("/who_am_i", {});
+            localStorage.setItem("user", JSON.stringify(res.data.user));
+            setUser(res.data.user);
             toast.success(res.data.message);
           }
         })
