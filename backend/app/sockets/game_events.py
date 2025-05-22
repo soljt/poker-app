@@ -73,11 +73,17 @@ def handle_player_action(data):
                 print(f"emitting game state to {name}: {game_state}")
                 emit("update_game_state", game_state, to=name)
             emit("round_over", pot_award_info, to=game_id)
-            # TODO check whether there are enough players to start the next hand
+            # TODO check whether there are enough players to start the next hand (considering leavers and joiners)
+            emit_countdown(game_id, 10)
             start_next_round_after_delay(game_id)
     except Exception as e:
         emit("error", {"message": str(e)})
         return
+    
+def emit_countdown(game_id, seconds_left):
+    socketio.emit("round_countdown", {"seconds": seconds_left}, to=game_id)
+    if seconds_left > 0:
+        Timer(1, emit_countdown, args=(game_id, seconds_left - 1)).start()
 
 def start_next_round_after_delay(game_id, delay=10):
     def start_round():

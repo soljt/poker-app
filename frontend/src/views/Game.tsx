@@ -14,6 +14,7 @@ const Game = () => {
   const [playerToAct, setPlayerToAct] = useState("");
   const [actionList, setActionList] = useState<Array<ActionItem> | null>(null);
   const [showRoundOver, setShowRoundOver] = useState(false);
+  const [countDownTimer, setCountDownTimer] = useState(999);
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
   const { socket, user } = useAuth();
 
@@ -60,6 +61,9 @@ const Game = () => {
       setPotAwards(data);
       setShowRoundOver(true);
     });
+    socket?.on("round_countdown", (data) => {
+      setCountDownTimer(data.seconds);
+    });
     return () => {
       socket?.off("player_turn", handlePlayerTurn);
       socket?.off("update_game_state");
@@ -74,6 +78,7 @@ const Game = () => {
         show={showRoundOver}
         potAwards={potAwards}
         onClose={() => setShowRoundOver(false)}
+        timeToNextRound={countDownTimer}
       />
 
       {user?.username === playerToAct && (

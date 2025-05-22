@@ -7,11 +7,13 @@ type RoundOverOverlayProps = {
   show: boolean;
   potAwards: PotAwardItem[];
   onClose: () => void;
+  timeToNextRound: number;
 };
 
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   show,
   potAwards,
+  timeToNextRound,
 }) => {
   if (!show) return null;
   return (
@@ -54,6 +56,7 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
           );
         })}
       </ListGroup>
+      <h6>Time to next round {timeToNextRound}</h6>
     </div>
   );
 };
