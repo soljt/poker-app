@@ -2,6 +2,7 @@ import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { PokerGameProps } from "../types";
 import { useAuth } from "../context/useAuth";
+import PlayingCard from "./PlayingCard";
 
 const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
   const {
@@ -73,9 +74,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
             <div className="card-header">My Cards</div>
             <div className="card-body d-flex gap-2">
               {my_cards.map((card, index) => (
-                <span key={index} className="badge bg-success fs-5 p-2">
-                  {card}
-                </span>
+                <PlayingCard key={index} card={card} />
               ))}
             </div>
           </div>
@@ -86,9 +85,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
             <div className="card-body d-flex gap-2">
               {board.length > 0 ? (
                 board.map((card, index) => (
-                  <span key={index} className="badge bg-secondary fs-5 p-2">
-                    {card}
-                  </span>
+                  <PlayingCard key={index} card={card} />
                 ))
               ) : (
                 <span className="text-muted">No cards on board yet</span>

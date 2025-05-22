@@ -15,7 +15,6 @@ const Game = () => {
   const [actionList, setActionList] = useState<Array<ActionItem> | null>(null);
   const [showRoundOver, setShowRoundOver] = useState(false);
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
-  const [host, setHost] = useState("");
   const { socket, user } = useAuth();
 
   // should also handle REDIRECTING user if they have no "game_id" localStorage or
@@ -41,23 +40,6 @@ const Game = () => {
     }
   }, []);
 
-  useEffect(() => {
-    try {
-      game_api
-        .get("/host", { params: { game_id: localStorage.getItem("game_id") } })
-        .then((response) => {
-          if (response.data.error) {
-            toast.warn(response.data.error);
-            setErrorMessage(response.data.error);
-          } else {
-            setHost(response.data.host);
-          }
-        });
-    } catch (error) {
-      handleError(error);
-    }
-  }, []);
-
   const handlePlayerTurn = (data: PlayerTurnData) => {
     console.log("received:", data);
     setPlayerToAct(data.player_to_act);
@@ -67,12 +49,7 @@ const Game = () => {
   const updateGameState = (data: GameData) => {
     console.log("updating game state:", data);
     setGameData(data);
-  };
-
-  const handleStartNextRound = () => {
-    socket?.emit("start_next_round");
     setShowRoundOver(false);
-    setPotAwards([]);
   };
 
   useEffect(() => {
@@ -97,8 +74,6 @@ const Game = () => {
         show={showRoundOver}
         potAwards={potAwards}
         onClose={() => setShowRoundOver(false)}
-        isHost={host === user?.username} // determine based on logged-in user
-        onStartNextRound={handleStartNextRound}
       />
 
       {user?.username === playerToAct && (

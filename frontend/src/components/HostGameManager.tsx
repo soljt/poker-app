@@ -12,11 +12,11 @@ const HostGameManager = () => {
 
   return (
     <div className="vstack gap-3">
-      {!localStorage.getItem("game_id") && (
+      {
         <button className="btn btn-lg btn-info" onClick={handleCreateGame}>
           Create Game
         </button>
-      )}
+      }
     </div>
   );
 };

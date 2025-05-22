@@ -435,14 +435,17 @@ class PokerRound:
     def __init__(self, players: Union[List[str], List[Player], Table], small_blind: int, big_blind: int): 
         if isinstance(players, Table):
             self.table = players
-            self.table.reset()
         else:
             self.table = Table(len(players), players)
+        self.sb_amount = small_blind
+        self.bb_amount = big_blind
+        self.reset()
+
+    def reset(self):
+        self.table.reset()
         self.deck = Deck()
         self.board = []
         self.current_bet = 0
-        self.sb_amount = small_blind
-        self.bb_amount = big_blind
         self.heads_up = self.table.num_seats == 2
         self.final_betting_round_aggressor = None
         self.active_players = set()
@@ -665,6 +668,11 @@ class PokerRound:
         ranked_active_players = self.rank_active_players()
         pot_award_info = self.pot.award_pot(ranked_active_players)
         return pot_award_info
+    
+    def start_next_round(self):
+        self.table.rotate()
+        self.reset()
+        self.start_round()
 
     def deal_board(self, num_cards: int):
         """

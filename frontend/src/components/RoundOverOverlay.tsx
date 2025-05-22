@@ -1,5 +1,5 @@
 import React from "react";
-import { ListGroup, Button } from "react-bootstrap";
+import { ListGroup } from "react-bootstrap";
 
 import { PotAwardItem } from "../types";
 
@@ -7,15 +7,11 @@ type RoundOverOverlayProps = {
   show: boolean;
   potAwards: PotAwardItem[];
   onClose: () => void;
-  isHost: boolean;
-  onStartNextRound: () => void;
 };
 
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   show,
   potAwards,
-  isHost,
-  onStartNextRound,
 }) => {
   if (!show) return null;
   return (
@@ -58,13 +54,6 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
           );
         })}
       </ListGroup>
-      {isHost && (
-        <div className="d-grid">
-          <Button variant="success" onClick={onStartNextRound}>
-            Start Next Round
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

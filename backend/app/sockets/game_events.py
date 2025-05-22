@@ -5,6 +5,7 @@ from app.globals import connected_users, games
 from app.db import db
 from app.models.user import User
 from app.game_logic.game_logic import PokerRound, Player
+from threading import Timer
 
 class UserValidationError(Exception):
     def __init__(self, reason="Could not find the user in active users"):
@@ -72,9 +73,24 @@ def handle_player_action(data):
                 print(f"emitting game state to {name}: {game_state}")
                 emit("update_game_state", game_state, to=name)
             emit("round_over", pot_award_info, to=game_id)
+            # TODO check whether there are enough players to start the next hand
+            start_next_round_after_delay(game_id)
     except Exception as e:
         emit("error", {"message": str(e)})
         return
+
+def start_next_round_after_delay(game_id, delay=10):
+    def start_round():
+        game = games[game_id]["game"]
+        game.start_next_round()
+        for name in game.get_players():
+            game_state = game.serialize_for_player(name)
+            print(f"emitting game state to {name}: {game_state}")
+            socketio.emit("update_game_state", game_state, to=name)
+        data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
+        socketio.emit("player_turn", data, to=game_id)
+    
+    Timer(delay, start_round).start()
 
 
 @socketio.on("get_hand")
