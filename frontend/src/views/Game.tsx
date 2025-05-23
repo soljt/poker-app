@@ -7,6 +7,7 @@ import PlayerActionPanel from "../components/PlayerActionPanel";
 import RoundOverOverlay from "../components/RoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
+import { useSocket } from "../context/SocketProvider";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -16,7 +17,8 @@ const Game = () => {
   const [showRoundOver, setShowRoundOver] = useState(false);
   const [countDownTimer, setCountDownTimer] = useState(999);
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
-  const { socket, user } = useAuth();
+  const { user } = useAuth();
+  const socket = useSocket();
 
   // should also handle REDIRECTING user if they have no "game_id" localStorage or
   // if they are not in the game they try to join
@@ -55,53 +57,55 @@ const Game = () => {
 
   useEffect(() => {
     console.log("Socket status:", socket?.connected);
-    socket?.on("player_turn", handlePlayerTurn);
-    socket?.on("update_game_state", updateGameState);
-    socket?.on("round_over", (data: PotAwardItem[]) => {
+    socket.on("player_turn", handlePlayerTurn);
+    socket.on("update_game_state", updateGameState);
+    socket.on("round_over", (data: PotAwardItem[]) => {
       setPotAwards(data);
       setShowRoundOver(true);
     });
-    socket?.on("round_countdown", (data) => {
+    socket.on("round_countdown", (data) => {
       setCountDownTimer(data.seconds);
     });
     return () => {
-      socket?.off("player_turn", handlePlayerTurn);
-      socket?.off("update_game_state");
-      socket?.off("round_over");
+      socket.off("player_turn", handlePlayerTurn);
+      socket.off("update_game_state");
+      socket.off("round_over");
     };
   }, [socket]);
 
   return (
     <>
       {gameData && <PokerGamePage gameData={gameData} />}
-      <RoundOverOverlay
-        show={showRoundOver}
-        potAwards={potAwards}
-        onClose={() => setShowRoundOver(false)}
-        timeToNextRound={countDownTimer}
-      />
-
-      {user?.username === playerToAct && (
-        <PlayerActionPanel
-          availableActions={
-            actionList || [{ action: "Nothing", min: 0, allin: false }]
-          }
-          onActionSelect={(action: string, amount?: number) => {
-            socket?.emit("player_action", {
-              player: user.username,
-              action,
-              amount: amount ?? null,
-            });
-            console.log(
-              "sent to backend...player:",
-              user.username,
-              "action:",
-              action,
-              "amount:",
-              amount ?? null
-            );
-          }}
+      {showRoundOver ? (
+        <RoundOverOverlay
+          show={showRoundOver}
+          potAwards={potAwards}
+          onClose={() => setShowRoundOver(false)}
+          timeToNextRound={countDownTimer}
         />
+      ) : (
+        user?.username === playerToAct && (
+          <PlayerActionPanel
+            availableActions={
+              actionList || [{ action: "Nothing", min: 0, allin: false }]
+            }
+            onActionSelect={(action: string, amount?: number) => {
+              socket.emit("player_action", {
+                player: user.username,
+                action,
+                amount: amount ?? null,
+              });
+              console.log(
+                "sent to backend...player:",
+                user.username,
+                "action:",
+                action,
+                "amount:",
+                amount ?? null
+              );
+            }}
+          />
+        )
       )}
       <div className="container">
         <h4 className="text-center" style={{ color: "red" }}>

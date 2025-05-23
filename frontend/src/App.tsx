@@ -9,6 +9,7 @@ import NavbarComponent from "./components/Navbar.tsx";
 import { UserProvider } from "./context/useAuth.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
 import Game from "./views/Game.tsx";
+import { SocketProvider } from "./context/SocketProvider.tsx";
 
 export default function App() {
   return (
@@ -23,7 +24,9 @@ export default function App() {
             path="/lobby"
             element={
               <ProtectedRoute>
-                <Lobby />
+                <SocketProvider>
+                  <Lobby />
+                </SocketProvider>
               </ProtectedRoute>
             }
           />
@@ -31,7 +34,9 @@ export default function App() {
             path="/game"
             element={
               <ProtectedRoute>
-                <Game />
+                <SocketProvider>
+                  <Game />
+                </SocketProvider>
               </ProtectedRoute>
             }
           />

@@ -1,16 +1,32 @@
 import { io, Socket } from "socket.io-client";
-import { handleError } from "./helpers/ErrorHandler";
 
 const URL = "http://localhost:5000";
 
-export const createSocket = (): Socket | null => {
-  try {
-    const socket = io(URL, {
+let socket: Socket;
+
+export const getSocket = (): Socket => {
+  if (!socket) {
+    socket = io(URL, {
+      autoConnect: false,
       withCredentials: true,
     });
-    return socket;
-  } catch (error: unknown) {
-    handleError(error);
-    return null;
   }
+  return socket;
 };
+
+// import { io, Socket } from "socket.io-client";
+// import { handleError } from "./helpers/ErrorHandler";
+
+// const URL = "http://localhost:5000";
+
+// export const createSocket = (): Socket | null => {
+//   try {
+//     const socket = io(URL, {
+//       withCredentials: true,
+//     });
+//     return socket;
+//   } catch (error: unknown) {
+//     handleError(error);
+//     return null;
+//   }
+// };

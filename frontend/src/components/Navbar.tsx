@@ -4,11 +4,10 @@ import Navbar from "react-bootstrap/Navbar";
 // import NavDropdown from "react-bootstrap/NavDropdown";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { ConnectionState } from "./ConnectionState";
 
 function NavbarComponent() {
   const navigate = useNavigate();
-  const { isLoggedIn, user, logout, socket } = useAuth();
+  const { isLoggedIn, user, logout } = useAuth();
   return (
     <Navbar expand="lg" className="bg-body-tertiary">
       <Container>
@@ -44,7 +43,6 @@ function NavbarComponent() {
         </Nav>
         <div className="d-flex align-items-center ms-auto gap-3">
           {isLoggedIn() && <h4 className="mb-0">Welcome, {user?.username}</h4>}
-          <ConnectionState socket={socket} />
         </div>
       </Container>
     </Navbar>

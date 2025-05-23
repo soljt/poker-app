@@ -1,22 +1,15 @@
-import { createContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
 import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
 import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
 import { auth_api, game_api } from "../services/api";
-import { createSocket } from "../socket";
-import { Socket } from "socket.io-client";
-import {
-  handleSocketError,
-  handleSocketMessage,
-} from "../helpers/SocketAlertHandler";
 
 // type for context
 type UserContextType = {
   user: User | null;
   token: string | null;
-  socket: Socket | null;
   registerUser: (username: string, password: string) => void;
   loginUser: (username: string, password: string) => void;
   logout: () => void;
@@ -40,7 +33,6 @@ export const UserProvider = ({ children }: Props) => {
       ? JSON.parse(localStorage.getItem("user") || "") // would throw an error if we tried to JSON.parse("")
       : null
   );
-  const socket = useRef<Socket | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   function getCookie(name: string) {
@@ -72,24 +64,6 @@ export const UserProvider = ({ children }: Props) => {
     fetchMe();
     setIsReady(true);
   }, []);
-
-  useEffect(() => {
-    if (!user || !token || socket.current) return;
-
-    socket.current = createSocket();
-    // Handle global socket errors
-    socket.current?.on("error", handleSocketError);
-    socket.current?.on("message", handleSocketMessage);
-    console.log("listeners created for socket error and message events");
-
-    return () => {
-      socket.current?.off("error", handleSocketError);
-      socket.current?.off("message", handleSocketMessage);
-      socket.current?.disconnect();
-      socket.current = null;
-      console.log("listeners destroyed and socket killed");
-    };
-  }, [user, token]);
 
   const contextValue = useMemo(() => {
     // register a new user
@@ -133,15 +107,12 @@ export const UserProvider = ({ children }: Props) => {
         setUser(null);
         localStorage.removeItem("user");
         setToken(null);
-        socket.current?.disconnect();
-        socket.current = null;
         navigate("/");
       });
     };
     return {
       user,
       token,
-      socket: socket.current,
       registerUser,
       loginUser,
       logout,
