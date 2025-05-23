@@ -7,7 +7,7 @@ import PlayerActionPanel from "../components/PlayerActionPanel";
 import RoundOverOverlay from "../components/RoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
-import { useSocket } from "../context/SocketProvider";
+import { useSocket } from "../context/useSocket";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);

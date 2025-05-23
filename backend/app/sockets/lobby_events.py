@@ -1,7 +1,7 @@
 from flask import request
 from flask_socketio import emit, join_room, leave_room
 from app.extensions import socketio
-from app.globals import connected_users, games
+from app.globals import connected_users, games, StatusEnum
 
 @socketio.on("join_game")
 def handle_join(data):
@@ -44,7 +44,6 @@ def handle_leave(data):
     
     connected_users[request.sid]["game_id"] = None
     games[game_id]["players"].remove(username)
-    emit("message", f"User {username} left the game", to=game_id)
     leave_room(game_id)
     emit("player_left", {"game_id": game_id, "username": username}, broadcast=True)  # notify all others to update Lobby
 
@@ -59,7 +58,7 @@ def handle_create_game(data):
         return
     
     connected_users[request.sid] = {"username": username, "game_id": game_id} # TODO remove the username overwrite
-    games[game_id] = {"host" : username, "players": [username]}
+    games[game_id] = {"host" : username, "players": [username], "status": StatusEnum.waiting_to_start.value}
     join_room(game_id)
     emit("game_created", {"game_id": game_id, "host": username, "players": [username for username in games[game_id]["players"]]}, broadcast=True) # all players can see
     return game_id
@@ -87,4 +86,4 @@ def handle_delete_game(data):
 
 @socketio.on("get_games")
 def handle_get_games():
-    return [{"game_id" : game_id, "host": games[game_id]["host"], "players": [username for username in games[game_id]["players"]]} for game_id in games]
+    return [{"game_id" : game_id, "host": games[game_id]["host"], "players": [username for username in games[game_id]["players"]], "status": games[game_id]["status"]} for game_id in games]

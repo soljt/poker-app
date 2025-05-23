@@ -1,4 +1,4 @@
-import { LobbyEntry } from "../types";
+import { GameStatus, LobbyEntry } from "../types";
 import { User } from "../models/User";
 import { Button, Card, ListGroup } from "react-bootstrap";
 
@@ -9,6 +9,7 @@ type Props = {
   deleteGame: (game_id: string, username: string) => void;
   leaveGame: (game_id: string, username: string) => void;
   handleStartGame: () => void;
+  reconnectToGame: () => void;
 };
 
 const LobbyList: React.FC<Props> = ({
@@ -18,6 +19,7 @@ const LobbyList: React.FC<Props> = ({
   deleteGame,
   leaveGame,
   handleStartGame,
+  reconnectToGame,
 }) => {
   return (
     <div className="container">
@@ -32,6 +34,10 @@ const LobbyList: React.FC<Props> = ({
                   <Card.Title>{game.host}'s Game</Card.Title>
                   <Card.Subtitle className="mb-2 text-muted">
                     Game ID: {game.game_id}
+                  </Card.Subtitle>
+
+                  <Card.Subtitle className="mb-1 text-muted">
+                    Status: {game.status}
                   </Card.Subtitle>
 
                   <ListGroup className="mb-3">
@@ -75,6 +81,16 @@ const LobbyList: React.FC<Props> = ({
                         </Button>
                       )
                     )}
+                    {game.players.includes(user?.username || "") &&
+                      (game.status === GameStatus.in_progress ||
+                        game.status === GameStatus.between_hands) && (
+                        <Button
+                          variant="outline-primary"
+                          onClick={reconnectToGame}
+                        >
+                          Reconnect
+                        </Button>
+                      )}
                   </div>
                 </Card.Body>
               </Card>

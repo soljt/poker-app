@@ -9,7 +9,7 @@ import NavbarComponent from "./components/Navbar.tsx";
 import { UserProvider } from "./context/useAuth.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
 import Game from "./views/Game.tsx";
-import { SocketProvider } from "./context/SocketProvider.tsx";
+import { SocketProvider } from "./context/useSocket.tsx";
 
 export default function App() {
   return (

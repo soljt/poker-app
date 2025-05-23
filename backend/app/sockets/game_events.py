@@ -1,7 +1,7 @@
 from flask import request
 from flask_socketio import emit
 from app.extensions import socketio
-from app.globals import connected_users, games
+from app.globals import StatusEnum, connected_users, games
 from app.db import db
 from app.models.user import User
 from app.game_logic.game_logic import PokerRound, Player
@@ -34,6 +34,7 @@ def handle_start_game(data):
         emit("error", {"message": "At least 2 players needed to start!"})
         return
     
+    games[game_id]["status"] = StatusEnum.in_progress.value
     poker_players = []
     # create Player objects
     for username in player_names:
@@ -84,6 +85,7 @@ def handle_player_action(data):
                 emit("update_game_state", game_state, to=name)
             emit("round_over", pot_award_info, to=game_id)
             # TODO check whether there are enough players to start the next hand (considering leavers and joiners)
+            games[game_id]["status"] = StatusEnum.between_hands.value
             emit_countdown(game_id, 10)
             start_next_round_after_delay(game_id)
     except Exception as e:
@@ -102,6 +104,7 @@ def emit_countdown(game_id, seconds_left):
 
 def start_next_round_after_delay(game_id, delay=10):
     def start_round():
+        games[game_id]["status"] = StatusEnum.in_progress.value
         game = games[game_id]["game"]
         game.start_next_round()
         for name in game.get_players():

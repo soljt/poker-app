@@ -34,12 +34,19 @@ export interface GameData {
    game_id: string; 
    host: string;
    players: string[]; 
+   status: string;
   }
 
   export enum Roles {
     player = "player",
     host = "host",
     admin = "admin"
+  }
+
+  export enum GameStatus {
+    waiting_to_start = "waiting_to_start",
+    between_hands = "between_hands",
+    in_progress = "in_progress"
   }
 
 
