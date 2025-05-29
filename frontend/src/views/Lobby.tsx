@@ -122,6 +122,7 @@ export default function Lobby() {
       socket.off("player_joined");
       socket.off("game_deleted");
       socket.off("game_started", startGame); // Cleanup listener on unmount
+      socket.off("player_left");
     };
   }, [navigate, socket]);
 

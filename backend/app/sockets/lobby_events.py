@@ -25,7 +25,7 @@ def handle_join(data):
     games[game_id]["players"].append(username)
     join_room(game_id)
     
-    emit("player_joined", {"game_id": game_id, "username": username}, to=game_id)  # notify players in the room
+    emit("player_joined", {"game_id": game_id, "username": username}, broadcast=True)  # notify all players
     return game_id
 
 @socketio.on("leave_game")

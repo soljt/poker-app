@@ -5,6 +5,7 @@ from types import NoneType
 import unittest
 from typing import List, Tuple, Union
 from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
+# from exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
 
 class Card:
     RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -264,9 +265,10 @@ class Table:
         players = []
         curr_player = self.btn
         while True:
-            players.append(str(curr_player))
             curr_player = curr_player.left
-            if curr_player.left != self.btn:
+            players.append(str(curr_player))
+            if curr_player == self.btn:
+                print("players from table.get_players():", players)
                 return players
 
 class Pot:
@@ -548,6 +550,7 @@ class PokerRound:
         self.current_player, self.last_to_act = self.get_betting_order(preflop=True)
         
     def get_player_to_act_and_actions(self):
+        self.set_player_to_act()
         player = self.current_player
         actions = self.get_player_available_actions(player)
         return {"player_to_act": player.name, "available_actions": actions}
@@ -567,10 +570,6 @@ class PokerRound:
         if action == "fold":
             player.folded = True
             self.active_players.remove(player)
-            if len(self.active_players) == 1:
-                self.is_betting_round_over = True # TODO idk if we need this
-                self.is_action_finished = True # all players but one have folded
-                self.is_poker_round_over = True # no need to see more cards
         
         # handle call
         elif action == "call":
@@ -583,6 +582,9 @@ class PokerRound:
             # in case player cannot raise the amount they specified (goes allin)
             self.current_bet = max(player.current_bet, self.current_bet) 
             self.last_to_act = player.right # used to determine when to stop looping (when everyone has called the bet)
+            while self.last_to_act.folded == True:
+                self.last_to_act = self.last_to_act.right
+        
             # if final_round:
             #     self.final_betting_round_aggressor = player
         
@@ -596,26 +598,33 @@ class PokerRound:
             self.allin_players.add(self.current_player)
         if self.last_to_act == self.current_player:
             self.is_betting_round_over = True
+
+        # handle case where only one player is left un-folded:
+        if len(self.active_players) == 1:
+            self.is_betting_round_over = True
+            self.is_action_finished = True # all players but one have folded
+            self.is_poker_round_over = True # no need to see more cards
             return
-        
+        # handle case where all active players are all-in
+        if len(self.active_players) == len(self.allin_players):
+            self.is_action_finished = True
+            self.is_betting_round_over = True
+            return
+        # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
+        if (len(self.active_players) - len(self.allin_players)) == 1 and self.active_players.difference(self.allin_players).pop().current_bet == self.current_bet: 
+            self.is_action_finished = True
+            self.is_betting_round_over = True
+            return
+        self.current_player = self.current_player.left
+    
+    def set_player_to_act(self):
         # start looking for the NEXT player
-        player = self.current_player.left 
+        player = self.current_player 
         while True: 
             # skip players who have folded or are already allin
             if (player.folded or player.allin):
-                if self.last_to_act == player:
-                    self.is_betting_round_over = True
-                    return
                 player = player.left
                 continue
-
-            # TODO maybe handle this somewhere else?? seems messy here - e.g. check this after a player goes all-in or at the end of a turn
-            # and then maybe set an instance variable to skip further betting rounds?
-            # handle case where all players except one are allin (non-allin player will have bet the table's current bet amount)
-            if (len(self.active_players) - len(self.allin_players)) == 1 and player.current_bet == self.current_bet: 
-                    self.is_action_finished = True
-                    self.is_betting_round_over = True
-                    return
             
             # if they haven't folded, aren't all-in
             self.current_player = player
@@ -764,6 +773,10 @@ class PokerRound:
                 starting_player = self.table.bb
             else:
                 starting_player = self.table.sb
+        
+        # TODO should this be somewhere else? Should "set_player_to_act" do this?
+        while last_to_act.folded:
+            last_to_act = last_to_act.right
             
         return starting_player, last_to_act
     
@@ -1240,18 +1253,28 @@ class TestPots(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
 
-    # cards = Deck().cards
-    # print(cards, "\n")
-    # cards.sort()
-    # print(cards)
+    game = PokerRound([Player("soljt", 1000), Player("kenna", 500), Player("hotbrian", 5000), Player("Beeps", 600)], 25, 50)
 
 
-    round = PokerRound([Player("Sol", 300), Player("Kenna", 5000), Player("Louis", 5000), Player("Beeps", 600)], 25, 50)
-    # round.get_to_showdown()
-    while True:
-        round.play()
-        round.table.rotate()
-        round = PokerRound(round.table, 25, 50)
+    game.start_round()
+
+    while not game.is_action_finished:
+        data = game.get_player_to_act_and_actions()
+        player = data["player_to_act"]
+        actions = data["available_actions"]
+        response = input(f"player {player}, you may {actions} (enter '[action] [amount | None]'):").split(" ")
+        if len(response) < 2:
+            game.handle_player_action(player, response[0], None)
+        else:
+            game.handle_player_action(player, response[0], int(response[1]))
+
+    pot_award_info = game.end_poker_round()
+    print(pot_award_info)
+
+
+        # round.play()
+        # round.table.rotate()
+        # round = PokerRound(round.table, 25, 50)
 
     # hand1 = Hand([Card("A", "diamonds"), Card("A", "diamonds")])
     # print(hand1.hand_rank)
