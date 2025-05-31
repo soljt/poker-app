@@ -35,6 +35,7 @@ export interface GameData {
    host: string;
    players: string[]; 
    status: string;
+   queue: string[];
   }
 
   export enum Roles {

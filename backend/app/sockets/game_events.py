@@ -19,6 +19,15 @@ def validate_player():
         raise UserValidationError
     return username, game_id
 
+def create_player_object(username: str, chips: int = -1) -> Player:
+    try:
+        user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+        new_player = Player(username, chips) if chips != -1 else Player(username, user.chips)
+        return new_player
+    except Exception as e:
+        emit("error", {"message": str(e)})
+        return
+
 @socketio.on("start_game")
 def handle_start_game(data):
     """Host starts the game, and hands are dealt."""
@@ -39,9 +48,7 @@ def handle_start_game(data):
     # create Player objects
     for username in player_names:
         try:
-            user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
-            new_player = Player(username, user.chips)
-            poker_players.append(new_player)
+            poker_players.append(create_player_object(username))
         except Exception as e:
             emit("error", {"message": str(e)})
             return
@@ -70,7 +77,7 @@ def handle_player_action(data):
 
         for name in game.get_players():
             game_state = game.serialize_for_player(name)
-            print(f"emitting game state to {name}: {game_state}")
+            print(f"emitting game state to {name}")
             emit("update_game_state", game_state, to=name)
         if not game.is_action_finished:
             data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {...}]}
@@ -81,10 +88,18 @@ def handle_player_action(data):
                 update_player_chips(name, game.get_player(name).chips)
             for name in game.get_players(): # additional update to show newly dealt cards if needed
                 game_state = game.serialize_for_player(name)
-                print(f"emitting game state to {name}: {game_state}")
+                print(f"emitting game state to {name}")
                 emit("update_game_state", game_state, to=name)
             emit("round_over", pot_award_info, to=game_id)
             # TODO check whether there are enough players to start the next hand (considering leavers and joiners)
+            # joiners
+            for username in games[game_id]["queue"]:
+                # TODO ensure table does not exceed seat limit
+                game.add_player(create_player_object(username))
+                games[game_id]["players"].append(username)
+                emit("player_joined", {"game_id": game_id, "username": username}, broadcast=True)  # notify all players
+                games[game_id]["queue"].remove(username)
+                emit("player_dequeued", {"game_id": game_id, "username": username}, broadcast=True)
             games[game_id]["status"] = StatusEnum.between_hands.value
             emit_countdown(game_id, 10)
             start_next_round_after_delay(game_id)
@@ -109,7 +124,7 @@ def start_next_round_after_delay(game_id, delay=10):
         game.start_next_round()
         for name in game.get_players():
             game_state = game.serialize_for_player(name)
-            print(f"emitting game state to {name}: {game_state}")
+            print(f"emitting game state to {name}")
             socketio.emit("update_game_state", game_state, to=name)
         data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
         socketio.emit("player_turn", data, to=game_id)

@@ -1,7 +1,14 @@
 from flask import request
-from flask_socketio import emit, join_room, leave_room
+from flask_socketio import close_room, emit, join_room, leave_room
 from app.extensions import socketio
 from app.globals import connected_users, games, StatusEnum
+
+def get_game_info(game_id: str):
+    return {"game_id" : game_id, 
+             "host": games[game_id]["host"], 
+             "players": [username for username in games[game_id]["players"]], 
+             "status": games[game_id]["status"], 
+             "queue": games[game_id]["queue"]}
 
 @socketio.on("join_game")
 def handle_join(data):
@@ -22,10 +29,14 @@ def handle_join(data):
         return
     
     connected_users[request.sid] = {"username": username, "game_id": game_id}
-    games[game_id]["players"].append(username)
+    if games[game_id].get("status", "") == "waiting_to_start":
+        games[game_id]["players"].append(username)
+        emit("player_joined", {"game_id": game_id, "username": username}, broadcast=True)  # notify all players
+    else:
+        games[game_id]["queue"].append(username)
+        emit("player_queued", {"game_id": game_id, "username": username}, broadcast=True)
     join_room(game_id)
     
-    emit("player_joined", {"game_id": game_id, "username": username}, broadcast=True)  # notify all players
     return game_id
 
 @socketio.on("leave_game")
@@ -38,14 +49,19 @@ def handle_leave(data):
         emit("error", {"message": "Game not found!"})
         return
     
-    if username not in games[game_id]["players"]:
+    if username not in (games[game_id]["players"] + games[game_id]["queue"]):
         emit("error", {"message": "You aren't even in this game...how did you leave it??"})
         return
     
     connected_users[request.sid]["game_id"] = None
-    games[game_id]["players"].remove(username)
+    if username in games[game_id]["players"]:
+        games[game_id]["players"].remove(username)
+        emit("player_left", {"game_id": game_id, "username": username}, broadcast=True)  # notify all others to update Lobby
+    else:
+        games[game_id]["queue"].remove(username)
+        emit("player_dequeued", {"game_id": game_id, "username": username}, broadcast=True)  # notify all others to update Lobby
     leave_room(game_id)
-    emit("player_left", {"game_id": game_id, "username": username}, broadcast=True)  # notify all others to update Lobby
+    
 
 @socketio.on("create_game")
 def handle_create_game(data):
@@ -58,9 +74,9 @@ def handle_create_game(data):
         return
     
     connected_users[request.sid] = {"username": username, "game_id": game_id} # TODO remove the username overwrite
-    games[game_id] = {"host" : username, "players": [username], "status": StatusEnum.waiting_to_start.value}
+    games[game_id] = {"host" : username, "players": [username], "status": StatusEnum.waiting_to_start.value, "queue": []}
     join_room(game_id)
-    emit("game_created", {"game_id": game_id, "host": username, "players": [username for username in games[game_id]["players"]]}, broadcast=True) # all players can see
+    emit("game_created", get_game_info(game_id), broadcast=True) # all players can see
     return game_id
 
 @socketio.on("delete_game")
@@ -73,7 +89,7 @@ def handle_delete_game(data):
         return
 
     # ugly inefficient removal from active_users - consider simply maintaining a mapping from sid to username
-    for username in games[game_id]["players"]:
+    for username in (games[game_id]["players"] + games[game_id]["queue"]):
         for sid, state in connected_users.items():
             if state.get("username") == username:
                 connected_users[sid]["game_id"] = None
@@ -81,9 +97,11 @@ def handle_delete_game(data):
 
     del games[game_id]
     emit("message", f"Game {game_id} deleted!", to=game_id)
+    close_room(game_id)
+
     emit("game_deleted", {"game_id": game_id}, broadcast=True)
     return game_id
 
 @socketio.on("get_games")
 def handle_get_games():
-    return [{"game_id" : game_id, "host": games[game_id]["host"], "players": [username for username in games[game_id]["players"]], "status": games[game_id]["status"]} for game_id in games]
+    return [get_game_info(game_id) for game_id in games]

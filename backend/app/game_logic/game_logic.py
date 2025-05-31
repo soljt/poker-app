@@ -268,8 +268,17 @@ class Table:
             curr_player = curr_player.left
             players.append(str(curr_player))
             if curr_player == self.btn:
-                print("players from table.get_players():", players)
                 return players
+            
+    def add_player(self, player: Player) -> None:
+        player.left = self.btn
+        player.right = self.btn.right
+        self.btn.right.left = player
+        self.btn.right = player
+        self.btn = player
+        self.sb = player.left
+        self.bb = self.sb.left
+        self.num_seats += 1
 
 class Pot:
     def __init__(self):
@@ -468,6 +477,10 @@ class PokerRound:
         self.is_poker_round_over = False
 
     # getters for API
+
+    # method to add new player between hands of ongoing round
+    def add_player(self, player: Player) -> None:
+        self.table.add_player(player)
 
     # helper to get a player object by username
     def get_player(self, username: str) -> Player:

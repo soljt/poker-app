@@ -59,6 +59,7 @@ export default function Lobby() {
   useEffect(() => {
     socket.emit("get_games", (gameList: LobbyEntry[]) => {
       setGames(gameList);
+      console.log("received on refresh:", gameList);
     }); // Request list on load
   }, [socket]);
 
@@ -99,6 +100,21 @@ export default function Lobby() {
       );
     });
 
+    socket.on("player_queued", (data) => {
+      toast.info(`${data.username} queued for ${data.game_id}`);
+      setGames((prevGames) =>
+        prevGames.map((game) => {
+          if (game.game_id === data.game_id) {
+            return {
+              ...game,
+              queue: [...game.queue, data.username],
+            };
+          }
+          return game;
+        })
+      );
+    });
+
     socket.on("player_left", (data) => {
       toast.info(`${data.username} left ${data.game_id}`);
       setGames((prevGames) =>
@@ -107,6 +123,21 @@ export default function Lobby() {
             return {
               ...game,
               players: game.players.filter((name) => name != data.username),
+            };
+          }
+          return game;
+        })
+      );
+    });
+
+    socket.on("player_dequeued", (data) => {
+      toast.info(`${data.username} dequeued from ${data.game_id}`);
+      setGames((prevGames) =>
+        prevGames.map((game) => {
+          if (game.game_id === data.game_id) {
+            return {
+              ...game,
+              queue: game.queue.filter((name) => name != data.username),
             };
           }
           return game;
@@ -123,6 +154,8 @@ export default function Lobby() {
       socket.off("game_deleted");
       socket.off("game_started", startGame); // Cleanup listener on unmount
       socket.off("player_left");
+      socket.off("player_queued");
+      socket.off("player_dequeued");
     };
   }, [navigate, socket]);
 

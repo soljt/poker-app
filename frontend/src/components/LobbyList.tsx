@@ -40,11 +40,31 @@ const LobbyList: React.FC<Props> = ({
                     Status: {game.status}
                   </Card.Subtitle>
 
+                  <Card.Subtitle className="mb-1 text-muted">
+                    Players:
+                  </Card.Subtitle>
+
                   <ListGroup className="mb-3">
                     {game.players.map((player) => (
                       <ListGroup.Item key={player}>👤 {player}</ListGroup.Item>
                     ))}
                   </ListGroup>
+
+                  {game.queue.length >= 1 && (
+                    <>
+                      <Card.Subtitle className="mb-1 text-muted">
+                        Queue:
+                      </Card.Subtitle>
+
+                      <ListGroup className="mb-3">
+                        {game.queue.map((player) => (
+                          <ListGroup.Item key={player}>
+                            👤 {player}
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    </>
+                  )}
 
                   <div className="d-flex gap-2">
                     {user?.username === game.host ? (
@@ -52,7 +72,8 @@ const LobbyList: React.FC<Props> = ({
                         Start Game
                       </Button>
                     ) : (
-                      !game.players.includes(user?.username || "") && (
+                      !game.players.includes(user?.username || "") &&
+                      !game.queue.includes(user?.username || "") && (
                         <Button
                           variant="primary"
                           onClick={() => joinGame(game.game_id)}
@@ -69,7 +90,8 @@ const LobbyList: React.FC<Props> = ({
                         Delete
                       </Button>
                     ) : (
-                      game.players.includes(user?.username || "") && (
+                      game.players.includes(user?.username || "") ||
+                      (game.queue.includes(user?.username || "") && (
                         <Button
                           variant="outline-danger"
                           onClick={() =>
@@ -79,7 +101,7 @@ const LobbyList: React.FC<Props> = ({
                         >
                           Leave
                         </Button>
-                      )
+                      ))
                     )}
                     {game.players.includes(user?.username || "") &&
                       (game.status === GameStatus.in_progress ||
