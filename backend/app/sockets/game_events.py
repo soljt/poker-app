@@ -122,15 +122,15 @@ def start_next_round_after_delay(game_id, delay=10):
         games[game_id]["status"] = StatusEnum.in_progress.value
         game = games[game_id]["game"]
         game.start_next_round()
+        socketio.emit("game_started", {"message": "Game joined successfully"}, to=game_id)
         for name in game.get_players():
             game_state = game.serialize_for_player(name)
             print(f"emitting game state to {name}")
             socketio.emit("update_game_state", game_state, to=name)
         data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
         socketio.emit("player_turn", data, to=game_id)
-    
+                    
     Timer(delay, start_round).start()
-
 
 @socketio.on("get_hand")
 def handle_get_hand():
