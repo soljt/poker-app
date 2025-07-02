@@ -15,44 +15,54 @@ function NavbarComponent() {
         <Navbar.Brand>Sol-Poker.ch</Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-        <Nav className="me-auto">
-          <Nav.Link
-            onClick={() => {
-              navigate("/");
-            }}
-          >
-            Home
-          </Nav.Link>
-          <Nav.Link
-            onClick={() => {
-              navigate("/lobby");
-            }}
-          >
-            Lobby
-          </Nav.Link>
-          {user?.role == Roles.admin && (
+        <div className="d-lg-none ms-auto">
+          {isLoggedIn() && (
+            <span className="fw-semibold">Welcome, {user?.username}</span>
+          )}
+        </div>
+
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="me-auto">
             <Nav.Link
               onClick={() => {
-                navigate("/admin");
+                navigate("/");
               }}
             >
-              Admin
+              Home
             </Nav.Link>
-          )}
-          {isLoggedIn() ? (
-            <Nav.Link onClick={logout}>Logout</Nav.Link>
-          ) : (
             <Nav.Link
               onClick={() => {
-                navigate("/login");
+                navigate("/lobby");
               }}
             >
-              Login
+              Lobby
             </Nav.Link>
+            {user?.role == Roles.admin && (
+              <Nav.Link
+                onClick={() => {
+                  navigate("/admin");
+                }}
+              >
+                Admin
+              </Nav.Link>
+            )}
+            {isLoggedIn() ? (
+              <Nav.Link onClick={logout}>Logout</Nav.Link>
+            ) : (
+              <Nav.Link
+                onClick={() => {
+                  navigate("/login");
+                }}
+              >
+                Login
+              </Nav.Link>
+            )}
+          </Nav>
+        </Navbar.Collapse>
+        <div className="d-none d-lg-block ms-auto">
+          {isLoggedIn() && (
+            <span className="fw-semibold">Welcome, {user?.username}</span>
           )}
-        </Nav>
-        <div className="d-flex align-items-center ms-auto gap-3">
-          {isLoggedIn() && <h4 className="mb-0">Welcome, {user?.username}</h4>}
         </div>
       </Container>
     </Navbar>
