@@ -36,10 +36,12 @@ def create_app(config_class=Config):
     from app.auth import auth as auth_bp
     from app.util import util as util_bp
     from app.game import game as game_bp
+    from app.admin import admin as admin_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(util_bp)
     app.register_blueprint(game_bp)
+    app.register_blueprint(admin_bp)
 
     return app
 

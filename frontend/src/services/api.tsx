@@ -13,3 +13,8 @@ export const game_api = axios.create({
   baseURL: "http://localhost:5000/game",
   withCredentials: true,
 });
+
+export const admin_api = axios.create({
+  baseURL: "http://localhost:5000/admin",
+  withCredentials: true,
+});

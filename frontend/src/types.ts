@@ -18,6 +18,10 @@ export interface GameData {
     gameData: GameData;
   }
 
+  export interface UserRowData {
+    id: number, username: string, chips: number, role: Roles
+  }
+
   export interface ActionItem {
     action: string, min: number | null, allin: boolean
   }

@@ -10,6 +10,8 @@ import { UserProvider } from "./context/useAuth.tsx";
 import ProtectedRoute from "./routes/ProtectedRoute.tsx";
 import Game from "./views/Game.tsx";
 import { SocketProvider } from "./context/useSocket.tsx";
+import Admin from "./views/Admin.tsx";
+import AdminRoute from "./routes/AdminRoute.tsx";
 
 export default function App() {
   return (
@@ -42,6 +44,14 @@ export default function App() {
           />
           <Route path="/register" element={<Register />}></Route>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
+            }
+          />
         </Routes>
       </UserProvider>
     </Router>

@@ -4,6 +4,7 @@ import Navbar from "react-bootstrap/Navbar";
 // import NavDropdown from "react-bootstrap/NavDropdown";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { Roles } from "../types";
 
 function NavbarComponent() {
   const navigate = useNavigate();
@@ -29,6 +30,15 @@ function NavbarComponent() {
           >
             Lobby
           </Nav.Link>
+          {user?.role == Roles.admin && (
+            <Nav.Link
+              onClick={() => {
+                navigate("/admin");
+              }}
+            >
+              Admin
+            </Nav.Link>
+          )}
           {isLoggedIn() ? (
             <Nav.Link onClick={logout}>Logout</Nav.Link>
           ) : (

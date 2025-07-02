@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
 import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
-import { auth_api, game_api } from "../services/api";
+import { admin_api, auth_api, game_api } from "../services/api";
 
 // type for context
 type UserContextType = {
@@ -49,6 +49,7 @@ export const UserProvider = ({ children }: Props) => {
         const token = getCookie("csrf_access_token") || null;
         auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+        admin_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
         const response = await auth_api.post("/who_am_i", {}); // can throw error
         localStorage.setItem("user", JSON.stringify(response.data.user));
         setUser(response.data.user);
