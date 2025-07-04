@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth.tsx";
 import HostGameManager from "../components/HostGameManager.tsx";
 import { toast } from "react-toastify";
-import { LobbyEntry } from "../types.ts";
+import { GameParams, LobbyEntry } from "../types.ts";
 import LobbyList from "../components/LobbyList.tsx";
 import { Roles } from "../types.ts";
 import { useSocket } from "../context/useSocket.tsx";
@@ -41,9 +41,8 @@ export default function Lobby() {
     });
   };
 
-  function handleCreateGame() {
-    const username = user?.username;
-    socket.emit("create_game", { username }, (game_id: string) => {
+  function handleCreateGame(gameParams: GameParams) {
+    socket.emit("create_game", gameParams, (game_id: string) => {
       localStorage.setItem("game_id", game_id);
     });
   }

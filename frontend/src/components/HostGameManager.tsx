@@ -1,16 +1,63 @@
+import { useState } from "react";
+import { GameParams } from "../types";
+
 const HostGameManager = ({
   handleCreateGame,
 }: {
-  handleCreateGame: () => void;
+  handleCreateGame: (gameParams: GameParams) => void;
 }) => {
+  const [gameParams, setGameParams] = useState<GameParams>({
+    small_blind: 10,
+    big_blind: 20,
+    buy_in: 1000,
+    table_max: 3000,
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setGameParams((prev) => ({
+      ...prev,
+      [name]: Number(value),
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleCreateGame(gameParams);
+  };
+
   return (
-    <div className="vstack gap-3">
-      {
-        <button className="btn btn-lg btn-info" onClick={handleCreateGame}>
-          Create Game
-        </button>
-      }
-    </div>
+    <form onSubmit={handleSubmit} className="vstack gap-3">
+      {[
+        { label: "Small Blind:", name: "small_blind" },
+        { label: "Big Blind:", name: "big_blind" },
+        { label: "Buy-In:", name: "buy_in" },
+        { label: "Table Max:", name: "table_max" },
+      ].map(({ label, name }) => (
+        <div key={name} className="d-flex align-items-center gap-3">
+          <label
+            htmlFor={name}
+            className="form-label mb-0"
+            style={{ width: 100 }}
+          >
+            {label}
+          </label>
+          <input
+            className="form-control"
+            type="number"
+            id={name}
+            name={name}
+            value={gameParams[name as keyof GameParams]}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      ))}
+
+      <button className="btn btn-lg btn-info" type="submit">
+        Create Game
+      </button>
+    </form>
   );
 };
 

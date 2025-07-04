@@ -452,6 +452,9 @@ class PokerRound:
         self.bb_amount = big_blind
         self.reset()
 
+    def __del__(self):
+        print("PokerGame object is being deleted!")
+
     def reset(self):
         self.table.reset()
         self.deck = Deck()
@@ -514,9 +517,9 @@ class PokerRound:
     
     def serialize_for_player(self, username: str) -> dict[str, List[int] | List[str] | str | List[dict[str, int | List[str]]]]:
         player = self.get_player(username)
-        data = self.get_player_to_act_and_actions()
-        player_to_act = data["player_to_act"]
-        actions = data["available_actions"]
+        data = self.get_player_to_act_and_actions() if not self.is_action_finished else None
+        player_to_act = data["player_to_act"] if data else None
+        actions = data["available_actions"] if data else None
         return {
             "blinds": [self.sb_amount, self.bb_amount],
             "my_cards": self.get_player_hand(player),
@@ -1266,7 +1269,7 @@ class TestPots(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
 
-    game = PokerRound([Player("soljt", 1000), Player("kenna", 500), Player("hotbrian", 5000), Player("Beeps", 600)], 25, 50)
+    game = PokerRound([Player("soljt", 1000), Player("kenna", 500)], 25, 50)
 
 
     game.start_round()
@@ -1280,6 +1283,9 @@ if __name__ == "__main__":
             game.handle_player_action(player, response[0], None)
         else:
             game.handle_player_action(player, response[0], int(response[1]))
+        for username in game.get_players():
+            json_data = game.serialize_for_player(username)
+            print(json_data)
 
     pot_award_info = game.end_poker_round()
     print(pot_award_info)

@@ -13,6 +13,13 @@ export interface GameData {
   my_chips: number;
   phase: string;
 }
+
+export interface GameParams {
+  small_blind: number;
+  big_blind: number;
+  buy_in: number;
+  table_max: number;
+}
   
   export interface PokerGameProps {
     gameData: GameData;
@@ -38,6 +45,10 @@ export interface GameData {
    game_id: string; 
    host: string;
    players: string[]; 
+   small_blind: number,
+   big_blind: number,
+   buy_in: number,
+   table_max: number,
    status: string;
    queue: string[];
   }

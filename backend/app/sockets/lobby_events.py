@@ -2,11 +2,16 @@ from flask import request
 from flask_socketio import close_room, emit, join_room, leave_room
 from app.extensions import socketio
 from app.globals import connected_users, games, StatusEnum
+from app.sockets.helpers import cashout_all_players, get_user_bankroll, remove_users_from_game
 
 def get_game_info(game_id: str):
     return {"game_id" : game_id, 
              "host": games[game_id]["host"], 
-             "players": [username for username in games[game_id]["players"]], 
+             "players": games[game_id]["players"], 
+             "small_blind": games[game_id]["small_blind"],
+             "big_blind": games[game_id]["big_blind"],
+             "buy_in": games[game_id]["buy_in"],
+             "table_max": games[game_id]["table_max"],
              "status": games[game_id]["status"], 
              "queue": games[game_id]["queue"]}
 
@@ -26,6 +31,10 @@ def handle_join(data):
     
     if connected_users[request.sid]["game_id"]:
         emit("error", {"message": "You are already in another game!"})
+        return
+    
+    if get_user_bankroll(username) < games[game_id]["buy_in"]:
+        emit("error", {"message": "You don't have enough to buy in to this game..."})
         return
     
     connected_users[request.sid] = {"username": username, "game_id": game_id}
@@ -73,8 +82,20 @@ def handle_create_game(data):
         emit("error", {"message": "You have already created a game."})
         return
     
+    if get_user_bankroll(username) < data["buy_in"]:
+        emit("error", {"message": "You don't have enough to buy in to your own game..."})
+        return
+    
     connected_users[request.sid] = {"username": username, "game_id": game_id} # TODO remove the username overwrite
-    games[game_id] = {"host" : username, "players": [username], "status": StatusEnum.waiting_to_start.value, "queue": []}
+    games[game_id] = {
+        "host" : username, 
+        "players": [username], 
+        "small_blind": data["small_blind"],
+        "big_blind": data["big_blind"],
+        "buy_in": data["buy_in"],
+        "table_max": data["table_max"],
+        "status": StatusEnum.waiting_to_start.value, 
+        "queue": []}
     join_room(game_id)
     emit("game_created", get_game_info(game_id), broadcast=True) # all players can see
     return game_id
@@ -88,13 +109,10 @@ def handle_delete_game(data):
         emit("error", {"message": "You are not the host or game does not exist."})
         return
 
-    # ugly inefficient removal from active_users - consider simply maintaining a mapping from sid to username
-    for username in (games[game_id]["players"] + games[game_id]["queue"]):
-        for sid, state in connected_users.items():
-            if state.get("username") == username:
-                connected_users[sid]["game_id"] = None
-                break
+    if games[game_id].get("game"):
+        cashout_all_players(game_id)
 
+    remove_users_from_game(game_id)
     del games[game_id]
     emit("message", f"Game {game_id} deleted!", to=game_id)
     close_room(game_id)

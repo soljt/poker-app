@@ -32,6 +32,23 @@ const LobbyList: React.FC<Props> = ({
               <Card>
                 <Card.Body>
                   <Card.Title>{game.host}'s Game</Card.Title>
+                  <Card.Text>
+                    <Card.Subtitle className="mb-1 ">
+                      Small Blind: {game.small_blind}
+                    </Card.Subtitle>
+
+                    <Card.Subtitle className="mb-1 ">
+                      Big Blind: {game.big_blind}
+                    </Card.Subtitle>
+
+                    <Card.Subtitle className="mb-1 ">
+                      Buy-in: {game.buy_in}
+                    </Card.Subtitle>
+
+                    <Card.Subtitle className="mb-1 ">
+                      Table Max: {game.table_max}
+                    </Card.Subtitle>
+                  </Card.Text>
                   <Card.Subtitle className="mb-2 text-muted">
                     Game ID: {game.game_id}
                   </Card.Subtitle>
