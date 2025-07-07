@@ -46,9 +46,13 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
       <div className="text-center mb-3">
         <strong>Board:</strong>
         <div className="mt-1">
-          {board.map((card, index) => (
-            <PlayingCard key={index} card={card} />
-          ))}
+          {board.length > 0
+            ? board.map((card, index) => (
+                <PlayingCard key={index} card={card} />
+              ))
+            : Array.from({ length: 5 }).map((_, index) => (
+                <PlayingCard key={index} faceDown={true} />
+              ))}
         </div>
       </div>
 
@@ -75,6 +79,10 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
                   Amount: {pot.amount} chips
                 </>
               )}
+              <>
+                <br />
+                Winning Hand: {pot.hand_rank}
+              </>
             </ListGroup.Item>
           );
         })}

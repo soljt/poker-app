@@ -44,7 +44,7 @@ export interface GameParams {
   }
 
   export interface PotAwardItem {
-    winners: string[], hands: string[][], amount: number, share: number
+    winners: string[], hands: string[][], amount: number, share: number, hand_rank: string
   }
 
   export interface LobbyEntry {

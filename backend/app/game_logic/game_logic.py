@@ -370,7 +370,7 @@ class Pot:
             player.chips += share
             print(f"{player} gets {share}")
         print(f"-------------------------")
-        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share}
+        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share, "hand_rank": Hand.HAND_RANKS[winners[0].best_hand.hand_rank]}
     
     def refund_pot(self) -> None:
         for player in self.player_contributions:
@@ -755,7 +755,7 @@ class PokerRound:
         for i, pot in enumerate(pot_award_info):
             # if there's more than one winner, they all have to show
             if len(pot["winners"]) > 1:
-                must_show_players.add(name for name in pot["winners"])
+                must_show_players = must_show_players.union(set([name for name in pot["winners"]]))
                 continue
             # if there is a next (overflow) pot, the winner of this pot must show to claim it
             # or if you didn't win by default (getting folded to)
@@ -1336,30 +1336,49 @@ class TestPots(unittest.TestCase):
         winners = round.rank_active_players()
         round.pot.award_pot(winners)
 
+class TestDetermineShowers(unittest.TestCase):
+    def test_split_pot(self):
+        round = PokerRound(['sol', 'kenna'], 50, 100)
+        round.start_round()
+        round.board = [Card("J", "hearts"), Card("J", "diamonds"), Card("5", "hearts"), Card("Q", "clubs"), Card("5", "diamonds")]
+        player = round.table.btn
+        player.hole_cards = [Card("4", "clubs"), Card("7", "hearts")]
+        player = player.left
+        player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
+
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            player = player.left
+
+        ranked_active_players = round.rank_active_players()
+        pot_award_info = round.pot.award_pot(ranked_active_players)
+        self.assertEqual(set([entry["username"] for entry in round.determine_must_show_players(pot_award_info)]), set(["sol", "kenna"]))
 
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
 
-    game = PokerRound([Player("soljt", 1000), Player("kenna", 500)], 25, 50)
+    # game = PokerRound([Player("soljt", 1000), Player("kenna", 500)], 25, 50)
 
 
-    game.start_round()
+    # game.start_round()
 
-    while not game.is_action_finished:
-        data = game.get_player_to_act_and_actions()
-        player = data["player_to_act"]
-        actions = data["available_actions"]
-        response = input(f"player {player}, you may {actions} (enter '[action] [amount | None]'):").split(" ")
-        if len(response) < 2:
-            game.handle_player_action(player, response[0], None)
-        else:
-            game.handle_player_action(player, response[0], int(response[1]))
-        for username in game.get_players():
-            json_data = game.serialize_for_player(username)
-            print(json_data)
+    # while not game.is_action_finished:
+    #     data = game.get_player_to_act_and_actions()
+    #     player = data["player_to_act"]
+    #     actions = data["available_actions"]
+    #     response = input(f"player {player}, you may {actions} (enter '[action] [amount | None]'):").split(" ")
+    #     if len(response) < 2:
+    #         game.handle_player_action(player, response[0], None)
+    #     else:
+    #         game.handle_player_action(player, response[0], int(response[1]))
+    #     for username in game.get_players():
+    #         json_data = game.serialize_for_player(username)
+    #         print(json_data)
 
-    pot_award_info = game.end_poker_round()
-    print(pot_award_info)
+    # pot_award_info = game.end_poker_round()
+    # must_show_players = game.determine_must_show_players(pot_award_info)
+    # print(pot_award_info)
+    # print(must_show_players)
 
 
         # round.play()
