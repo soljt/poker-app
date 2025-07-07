@@ -25,7 +25,6 @@ export interface GameParams {
   small_blind: number;
   big_blind: number;
   buy_in: number;
-  table_max: number;
 }
   
   export interface PokerGameProps {
@@ -55,7 +54,6 @@ export interface GameParams {
    small_blind: number,
    big_blind: number,
    buy_in: number,
-   table_max: number,
    status: string;
    joiner_queue: string[];
    leaver_queue: string[]

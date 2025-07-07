@@ -10,7 +10,6 @@ const HostGameManager = ({
     small_blind: 10,
     big_blind: 20,
     buy_in: 1000,
-    table_max: 3000,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +31,6 @@ const HostGameManager = ({
         { label: "Small Blind:", name: "small_blind" },
         { label: "Big Blind:", name: "big_blind" },
         { label: "Buy-In:", name: "buy_in" },
-        { label: "Table Max:", name: "table_max" },
       ].map(({ label, name }) => (
         <div key={name} className="d-flex align-items-center gap-3">
           <label

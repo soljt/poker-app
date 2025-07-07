@@ -45,10 +45,6 @@ const LobbyList: React.FC<Props> = ({
                     Buy-in: {game.buy_in}
                   </Card.Subtitle>
 
-                  <Card.Subtitle className="mb-1 ">
-                    Table Max: {game.table_max}
-                  </Card.Subtitle>
-
                   <Card.Subtitle className="mb-2 text-muted">
                     Game ID: {game.game_id}
                   </Card.Subtitle>

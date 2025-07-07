@@ -7,7 +7,6 @@ games = {}
 #     "small_blind": int,
 #     "big_blind": int,
 #     "buy_in": int,
-#     "table_max": int,
 #     "status": StatusEnum, 
 #     "joiner_queue": [],
 #     "leaver_queue": []} - "game" is not set until game is started by host

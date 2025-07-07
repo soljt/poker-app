@@ -12,7 +12,6 @@ def get_game_info(game_id: str):
              "small_blind": games[game_id]["small_blind"],
              "big_blind": games[game_id]["big_blind"],
              "buy_in": games[game_id]["buy_in"],
-             "table_max": games[game_id]["table_max"],
              "status": games[game_id]["status"], 
              "joiner_queue": games[game_id]["joiner_queue"]}
 
@@ -113,7 +112,6 @@ def handle_create_game(data):
         "small_blind": data["small_blind"],
         "big_blind": data["big_blind"],
         "buy_in": data["buy_in"],
-        "table_max": data["table_max"],
         "status": StatusEnum.waiting_to_start.value, 
         "joiner_queue": [],
         "leaver_queue": []}
