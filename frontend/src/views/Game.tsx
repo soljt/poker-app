@@ -4,7 +4,7 @@ import { handleError } from "../helpers/ErrorHandler";
 import { toast } from "react-toastify";
 import PokerGamePage from "../components/PokerGamePage";
 import PlayerActionPanel from "../components/PlayerActionPanel";
-import RoundOverOverlay from "../components/RoundOverOverlay";
+import RoundOverOverlay from "../components/NewRoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
 import { useSocket } from "../context/useSocket";
@@ -23,6 +23,9 @@ const Game = () => {
   const [host, setHost] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [actionType, setActionType] = useState<"leave" | "end" | null>(null);
+  const [revealedHands, setRevealedHands] = useState<Record<string, string[]>>(
+    {}
+  );
   const { user } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
@@ -126,6 +129,28 @@ const Game = () => {
     setShowConfirm(false);
   };
 
+  useEffect(() => {
+    socket.on("hand_revealed", ({ username, hand }) => {
+      console.log("revealed hands:", { username, hand });
+      setRevealedHands((prev) => ({
+        ...prev,
+        [username]: hand,
+      }));
+      socket.on("game_started", () => {
+        setRevealedHands({});
+      });
+    });
+
+    return () => {
+      socket.off("hand_revealed");
+      socket.off("game_started");
+    };
+  }, [socket]);
+
+  const handleShowOwnHand = () => {
+    socket.emit("reveal_hand"); // backend can resolve identity via session/auth
+  };
+
   return (
     <>
       <Container>
@@ -152,12 +177,17 @@ const Game = () => {
         />
       </Container>
       {gameData && <PokerGamePage gameData={gameData} />}
-      {showRoundOver ? (
+      {user && gameData && showRoundOver ? (
         <RoundOverOverlay
           show={showRoundOver}
           potAwards={potAwards}
           onClose={() => setShowRoundOver(false)}
           timeToNextRound={countDownTimer}
+          board={gameData.board}
+          revealedHands={revealedHands}
+          currentUser={user.username}
+          onShowOwnHand={handleShowOwnHand}
+          gamePlayers={gameData.players}
         />
       ) : (
         user?.username === playerToAct && (

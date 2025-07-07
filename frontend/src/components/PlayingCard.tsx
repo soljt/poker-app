@@ -1,36 +1,52 @@
-import React from "react";
-
 type PlayingCardProps = {
-  card: string;
+  card?: string; // optional
+  faceDown?: boolean;
 };
 
-const suitColors: Record<string, string> = {
-  hearts: "red",
-  diamonds: "blue",
-  spades: "black",
-  clubs: "green",
-};
+const PlayingCard: React.FC<PlayingCardProps> = ({ card, faceDown }) => {
+  if (faceDown || !card) {
+    return (
+      <span
+        className="badge fs-3 p-2 border border-dark"
+        style={{
+          backgroundColor: "gray",
+          color: "white",
+          minWidth: "50px",
+          textAlign: "center",
+          fontWeight: "bold",
+        }}
+      >
+        🂠
+      </span>
+    );
+  }
 
-const suitSymbols: Record<string, string> = {
-  hearts: "♥",
-  diamonds: "♦",
-  spades: "♠",
-  clubs: "♣",
-};
+  const getCardInfo = (cardStr: string) => {
+    const [rank, , suit] = cardStr.split(" ");
+    return { rank, suit };
+  };
 
-const getCardInfo = (cardStr: string): { rank: string; suit: string } => {
-  const [rank, , suit] = cardStr.split(" ");
-  return { rank, suit };
-};
+  const suitColors: Record<string, string> = {
+    hearts: "red",
+    diamonds: "blue",
+    spades: "black",
+    clubs: "green",
+  };
 
-const PlayingCard: React.FC<PlayingCardProps> = ({ card }) => {
+  const suitSymbols: Record<string, string> = {
+    hearts: "♥",
+    diamonds: "♦",
+    spades: "♠",
+    clubs: "♣",
+  };
+
   const { rank, suit } = getCardInfo(card);
   const color = suitColors[suit.toLowerCase()] || "gray";
   const symbol = suitSymbols[suit.toLowerCase()] || "?";
 
   return (
     <span
-      className={`badge fs-3 p-2 border border-dark`}
+      className="badge fs-3 p-2 border border-dark"
       style={{
         backgroundColor: "white",
         color,

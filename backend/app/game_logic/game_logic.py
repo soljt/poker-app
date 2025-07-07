@@ -750,6 +750,21 @@ class PokerRound:
         pot_award_info = self.pot.award_pot(ranked_active_players)
         return pot_award_info
     
+    def determine_must_show_players(self, pot_award_info):
+        must_show_players = set()
+        for i, pot in enumerate(pot_award_info):
+            # if there's more than one winner, they all have to show
+            if len(pot["winners"]) > 1:
+                must_show_players.add(name for name in pot["winners"])
+                continue
+            # if there is a next (overflow) pot, the winner of this pot must show to claim it
+            # or if you didn't win by default (getting folded to)
+            if i+1 < len(pot_award_info) or len(self.active_players) - len(self.allin_players) > 1:
+                must_show_players.add(pot["winners"][0])
+        
+        return [{"username": name, "hand": [str(card) for card in self.get_player(name).hole_cards]} for name in must_show_players]
+
+    
     def start_next_round(self):
         self.table.rotate()
         self.reset()

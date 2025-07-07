@@ -81,6 +81,10 @@ def handle_player_action(data):
         print("emitting round over")
 
         emit("round_over", pot_award_info, to=game_id)
+        # determine which players, if any, must show their hands
+        must_show_players = game.determine_must_show_players(pot_award_info)
+        for entry in must_show_players:
+            emit("hand_revealed", entry, to=game_id)
         # TODO check whether there are enough players to start the next hand (considering leavers and joiners)
         # leavers
         for username in games[game_id]["leaver_queue"]:
@@ -147,3 +151,11 @@ def handle_get_hand():
     game = games[game_id]["game"]
     hand = game.get_player_hand(username)
     return hand
+
+@socketio.on("reveal_hand")
+def handle_reveal_hand():
+    username, game_id = validate_player(request)
+
+    game = games[game_id]["game"]
+    hand = game.get_player_hand(username)
+    emit("hand_revealed", {"username": username, "hand": hand}, to=game_id)
