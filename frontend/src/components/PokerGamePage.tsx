@@ -44,17 +44,24 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
                 {players.map((player, index) => (
                   <li
                     key={index}
-                    className="list-group-item d-flex justify-content-between"
+                    className={`list-group-item d-flex justify-content-between align-items-center ${
+                      player.folded ? "opacity-50" : ""
+                    }`}
                   >
-                    <span>{player}</span>
+                    <div>
+                      <strong>{player.username}</strong>
+                      <div className="small text-muted">
+                        Bet: {player.current_bet || 0} | Chips: {player.chips}
+                      </div>
+                    </div>
                     <span>
-                      {player === small_blind_player && (
+                      {player.username === small_blind_player && (
                         <span className="badge bg-primary me-1">SB</span>
                       )}
-                      {player === big_blind_player && (
+                      {player.username === big_blind_player && (
                         <span className="badge bg-secondary me-1">BB</span>
                       )}
-                      {player === player_to_act && (
+                      {player.username === player_to_act && (
                         <span className="badge bg-warning text-dark">
                           To Act
                         </span>

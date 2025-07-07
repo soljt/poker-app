@@ -270,6 +270,20 @@ class Table:
             if curr_player == self.btn:
                 return players
             
+    def get_players_info(self) -> List[dict[str]]:
+        players = []
+        curr_player = self.btn
+        while True:
+            curr_player = curr_player.left
+            players.append({
+                "username": str(curr_player),
+                "chips": curr_player.chips,
+                "folded": curr_player.folded,
+                "current_bet": curr_player.current_bet
+            })
+            if curr_player == self.btn:
+                return players
+            
     def add_player(self, player: Player) -> None:
         player.left = self.btn
         player.right = self.btn.right
@@ -566,7 +580,7 @@ class PokerRound:
             "blinds": [self.sb_amount, self.bb_amount],
             "my_cards": self.get_player_hand(player),
             "board": self.get_board(),
-            "players": self.table.get_players(), # starting from btn
+            "players": self.table.get_players_info(), # starting from btn
             "pots": self.get_pots(),
             "small_blind_player": str(self.table.sb),
             "big_blind_player": str(self.table.bb),

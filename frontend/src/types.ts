@@ -2,7 +2,7 @@ export interface GameData {
   blinds: [number, number];
   my_cards: string[];
   board: string[];
-  players: string[];
+  players: GamePlayer[];
   pots: { amount: number; players: string[] }[];
   small_blind_player: string;
   big_blind_player: string;
@@ -12,6 +12,13 @@ export interface GameData {
   table_bet: number;
   my_chips: number;
   phase: string;
+}
+
+export interface GamePlayer {
+  username: string,
+  chips: number,
+  folded: boolean,
+  current_bet: number
 }
 
 export interface GameParams {
