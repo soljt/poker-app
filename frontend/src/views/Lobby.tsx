@@ -106,7 +106,7 @@ export default function Lobby() {
           if (game.game_id === data.game_id) {
             return {
               ...game,
-              queue: [...game.queue, data.username],
+              joiner_queue: [...game.joiner_queue, data.username],
             };
           }
           return game;
@@ -136,7 +136,9 @@ export default function Lobby() {
           if (game.game_id === data.game_id) {
             return {
               ...game,
-              queue: game.queue.filter((name) => name != data.username),
+              joiner_queue: game.joiner_queue.filter(
+                (name) => name != data.username
+              ),
             };
           }
           return game;

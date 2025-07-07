@@ -50,7 +50,8 @@ export interface GameParams {
    buy_in: number,
    table_max: number,
    status: string;
-   queue: string[];
+   joiner_queue: string[];
+   leaver_queue: string[]
   }
 
   export enum Roles {

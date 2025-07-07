@@ -9,7 +9,8 @@ games = {}
 #     "buy_in": int,
 #     "table_max": int,
 #     "status": StatusEnum, 
-#     "queue": []} - "game" is not set until game is started by host
+#     "joiner_queue": [],
+#     "leaver_queue": []} - "game" is not set until game is started by host
 
 connected_users = {} # active_users[socket_sid] = {"username": str, "game_id": str} - user doesn't become "active" unless they get a game_id, otherwise null
 class StatusEnum(enum.Enum):

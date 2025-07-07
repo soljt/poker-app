@@ -8,6 +8,9 @@ import RoundOverOverlay from "../components/RoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
 import { useSocket } from "../context/useSocket";
+import { Button, Container } from "react-bootstrap";
+import ConfirmActionModal from "../components/ConfirmActionModel";
+import { useNavigate } from "react-router-dom";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -17,8 +20,12 @@ const Game = () => {
   const [showRoundOver, setShowRoundOver] = useState(false);
   const [countDownTimer, setCountDownTimer] = useState(999);
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
+  const [host, setHost] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [actionType, setActionType] = useState<"leave" | "end" | null>(null);
   const { user } = useAuth();
   const socket = useSocket();
+  const navigate = useNavigate();
 
   // should also handle REDIRECTING user if they have no "game_id" localStorage or
   // if they are not in the game they try to join
@@ -36,6 +43,24 @@ const Game = () => {
             setPlayerToAct(response.data.player_to_act);
             setActionList(response.data.available_actions);
             console.log("available actions:", response.data.available_actions);
+          }
+        });
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      game_api
+        .get("/host", { params: { game_id: localStorage.getItem("game_id") } })
+        .then((response) => {
+          if (response.data.error) {
+            toast.warn(response.data.error);
+            setErrorMessage(response.data.error);
+          } else {
+            setHost(response.data.host);
+            console.log("host set as:", response.data.host);
           }
         });
     } catch (error) {
@@ -66,15 +91,66 @@ const Game = () => {
     socket.on("round_countdown", (data) => {
       setCountDownTimer(data.seconds);
     });
+    socket.on("game_deleted", (game) => {
+      if (localStorage.getItem("game_id") === game.game_id) {
+        localStorage.removeItem("game_id");
+      }
+      navigate("/lobby");
+    });
     return () => {
       socket.off("player_turn", handlePlayerTurn);
       socket.off("update_game_state");
       socket.off("round_over");
+      socket.off("game_deleted");
     };
-  }, [socket]);
+  }, [socket, navigate]);
+
+  const handleOpenConfirm = (type: "leave" | "end") => {
+    setActionType(type);
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = () => {
+    if (actionType === "leave") {
+      socket.emit("leave_game", { game_id: localStorage.getItem("game_id") });
+      socket.emit("player_action", {
+        player: user?.username,
+        action: "fold",
+        amount: null,
+      });
+      navigate("/lobby");
+    } else if (actionType === "end") {
+      socket.emit("delete_game", { game_id: localStorage.getItem("game_id") });
+    }
+    localStorage.removeItem("game_id");
+    setShowConfirm(false);
+  };
 
   return (
     <>
+      <Container>
+        {user?.username == host ? (
+          <Button variant="danger" onClick={() => handleOpenConfirm("end")}>
+            End Game
+          </Button>
+        ) : (
+          <Button variant="danger" onClick={() => handleOpenConfirm("leave")}>
+            Leave Game
+          </Button>
+        )}
+        <ConfirmActionModal
+          show={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={handleConfirm}
+          title={actionType === "end" ? "End Game?" : "Leave Game?"}
+          message={
+            actionType === "end"
+              ? "Are you sure you want to end the game for everyone?"
+              : "Are you sure you want to leave the game? You will automatically fold when action comes to you, though you may still win the pot if everyone else folds. You will not be able to join another game until this hand is over."
+          }
+          confirmText="Yes"
+        />
+      </Container>
       {gameData && <PokerGamePage gameData={gameData} />}
       {showRoundOver ? (
         <RoundOverOverlay
@@ -92,7 +168,7 @@ const Game = () => {
             onActionSelect={(action: string, amount?: number) => {
               socket.emit("player_action", {
                 player: user.username,
-                action,
+                action: action,
                 amount: amount ?? null,
               });
               console.log(

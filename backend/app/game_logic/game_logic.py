@@ -276,9 +276,29 @@ class Table:
         self.btn.right.left = player
         self.btn.right = player
         self.btn = player
-        self.sb = player.left
-        self.bb = self.sb.left
         self.num_seats += 1
+
+        if self.num_seats == 2:
+            self.sb = player
+        else:
+            self.sb = player.left
+            
+        self.bb = self.sb.left
+        
+    def remove_player(self, player: Player) -> None:
+        player.left.right = player.right
+        player.right.left = player.left
+        self.num_seats -= 1
+
+        if self.btn == player:
+            self.btn = player.left
+
+        if self.num_seats == 2:
+            self.sb = self.btn
+        else:
+            self.sb = self.btn.left
+
+        self.bb = self.sb.left
 
 class Pot:
     def __init__(self):
@@ -337,6 +357,12 @@ class Pot:
             print(f"{player} gets {share}")
         print(f"-------------------------")
         return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share}
+    
+    def refund_pot(self) -> None:
+        for player in self.player_contributions:
+            # give the player their money pack
+            player.chips += self.player_contributions[player]
+            self.player_contributions[player] = 0 # remove the money from the pot
 
     def serialize(self) -> dict[str, int | list[str]]:
         return {
@@ -427,6 +453,12 @@ class PotCollection:
             pot = pot.next
         print('-' * 80)
         return pot_award_info
+    
+    def refund_pot(self) -> None:
+        pot = self.main_pot
+        while pot:
+            pot.refund_pot()
+            pot = pot.next
 
     def __repr__(self):
         curr = self.main_pot
@@ -481,9 +513,16 @@ class PokerRound:
 
     # getters for API
 
+    def get_player_count(self) -> int:
+        return self.table.num_seats
+
     # method to add new player between hands of ongoing round
     def add_player(self, player: Player) -> None:
         self.table.add_player(player)
+
+    # method to remove leaving player between hands of ongoing round
+    def remove_player(self, player: Player) -> None:
+        self.table.remove_player(player)
 
     # helper to get a player object by username
     def get_player(self, username: str) -> Player:
@@ -514,6 +553,9 @@ class PokerRound:
     
     def get_players(self) -> List[str]:
         return self.table.get_players()
+    
+    def refund_pot(self) -> None:
+        self.pot.refund_pot()
     
     def serialize_for_player(self, username: str) -> dict[str, List[int] | List[str] | str | List[dict[str, int | List[str]]]]:
         player = self.get_player(username)
@@ -575,7 +617,7 @@ class PokerRound:
         if not self.current_player == player:
             raise NotPlayersTurnError(player)
         available_actions = self.get_player_available_actions(player)
-        if action not in [dic["action"] for dic in available_actions]:
+        if action not in ([dic["action"] for dic in available_actions] + ["fold"]): # always allow fold - needed for player leave
             raise InvalidActionError(action)
         if amount and amount < [dic.get("min") for dic in available_actions if dic["action"] == action][0]:
             # if they chose raise/bet etc. but didn't have enough to min-raise, put them all in

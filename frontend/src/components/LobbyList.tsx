@@ -32,23 +32,23 @@ const LobbyList: React.FC<Props> = ({
               <Card>
                 <Card.Body>
                   <Card.Title>{game.host}'s Game</Card.Title>
-                  <Card.Text>
-                    <Card.Subtitle className="mb-1 ">
-                      Small Blind: {game.small_blind}
-                    </Card.Subtitle>
 
-                    <Card.Subtitle className="mb-1 ">
-                      Big Blind: {game.big_blind}
-                    </Card.Subtitle>
+                  <Card.Subtitle className="mb-1 ">
+                    Small Blind: {game.small_blind}
+                  </Card.Subtitle>
 
-                    <Card.Subtitle className="mb-1 ">
-                      Buy-in: {game.buy_in}
-                    </Card.Subtitle>
+                  <Card.Subtitle className="mb-1 ">
+                    Big Blind: {game.big_blind}
+                  </Card.Subtitle>
 
-                    <Card.Subtitle className="mb-1 ">
-                      Table Max: {game.table_max}
-                    </Card.Subtitle>
-                  </Card.Text>
+                  <Card.Subtitle className="mb-1 ">
+                    Buy-in: {game.buy_in}
+                  </Card.Subtitle>
+
+                  <Card.Subtitle className="mb-1 ">
+                    Table Max: {game.table_max}
+                  </Card.Subtitle>
+
                   <Card.Subtitle className="mb-2 text-muted">
                     Game ID: {game.game_id}
                   </Card.Subtitle>
@@ -67,14 +67,14 @@ const LobbyList: React.FC<Props> = ({
                     ))}
                   </ListGroup>
 
-                  {game.queue.length >= 1 && (
+                  {game.joiner_queue.length >= 1 && (
                     <>
                       <Card.Subtitle className="mb-1 text-muted">
                         Queue:
                       </Card.Subtitle>
 
                       <ListGroup className="mb-3">
-                        {game.queue.map((player) => (
+                        {game.joiner_queue.map((player) => (
                           <ListGroup.Item key={player}>
                             👤 {player}
                           </ListGroup.Item>
@@ -90,7 +90,7 @@ const LobbyList: React.FC<Props> = ({
                       </Button>
                     ) : (
                       !game.players.includes(user?.username || "") &&
-                      !game.queue.includes(user?.username || "") && (
+                      !game.joiner_queue.includes(user?.username || "") && (
                         <Button
                           variant="primary"
                           onClick={() => joinGame(game.game_id)}
@@ -107,8 +107,8 @@ const LobbyList: React.FC<Props> = ({
                         Delete
                       </Button>
                     ) : (
-                      game.players.includes(user?.username || "") ||
-                      (game.queue.includes(user?.username || "") && (
+                      (game.players.includes(user?.username || "") ||
+                        game.joiner_queue.includes(user?.username || "")) && (
                         <Button
                           variant="outline-danger"
                           onClick={() =>
@@ -118,7 +118,7 @@ const LobbyList: React.FC<Props> = ({
                         >
                           Leave
                         </Button>
-                      ))
+                      )
                     )}
                     {game.players.includes(user?.username || "") &&
                       (game.status === GameStatus.in_progress ||
