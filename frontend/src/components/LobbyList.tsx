@@ -9,7 +9,7 @@ type Props = {
   deleteGame: (game_id: string, username: string) => void;
   leaveGame: (game_id: string, username: string) => void;
   handleStartGame: () => void;
-  reconnectToGame: () => void;
+  reconnectToGame: (game_id: string) => void;
 };
 
 const LobbyList: React.FC<Props> = ({
@@ -121,7 +121,7 @@ const LobbyList: React.FC<Props> = ({
                         game.status === GameStatus.between_hands) && (
                         <Button
                           variant="outline-primary"
-                          onClick={reconnectToGame}
+                          onClick={() => reconnectToGame(game.game_id)}
                         >
                           Reconnect
                         </Button>

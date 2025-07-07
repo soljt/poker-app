@@ -51,7 +51,8 @@ export default function Lobby() {
     socket.emit("start_game", { game_id: localStorage.getItem("game_id") });
   }
 
-  function reconnectToGame() {
+  function reconnectToGame(game_id: string) {
+    localStorage.setItem("game_id", game_id);
     navigate("/game");
   }
 

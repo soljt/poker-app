@@ -52,19 +52,20 @@ def disconnect_handler(reason):
         # TODO: handle disconnection from active game...remove the player? what
         # could use reason.SERVER_DISCONNECT to detect when server kicks due to inactivity
 
-        # if the user logged off intentionally
-        if reason == SocketIO.reason.CLIENT_DISCONNECT:
-            if room:
-                games[room]["players"].remove(username)
-                emit("error", {"message": f"User {username} logged off"}, to=room)
-                leave_room(room)
-                if username == games[room]["host"]:
-                    handle_delete_game({"game_id": room})
-            del connected_users[request.sid]
+        # # if the user logged off intentionally
+        # if reason == SocketIO.reason.CLIENT_DISCONNECT:
+        #     if room:
+        #         games[room]["players"].remove(username)
+        #         emit("error", {"message": f"User {username} logged off"}, to=room)
+        #         leave_room(room)
+        #         if username == games[room]["host"]:
+        #             handle_delete_game({"game_id": room})
+        #     del connected_users[request.sid]
         
-        # if they logged off, hopefully with the intent to reconnect...
-        # TODO: should implement some sort of timer to eventually remove them from connected_users and games
-        else:
-            emit("error", {"message": f"User {username} disconnected :("}, to=room)
+        # # if they logged off, hopefully with the intent to reconnect...
+        # # TODO: should implement some sort of timer to eventually remove them from connected_users and games
+        # else:
+        
+        emit("error", {"message": f"User {username} disconnected :("}, to=room)
     except AttributeError as e:
         print(e)
