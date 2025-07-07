@@ -8,11 +8,15 @@ export interface ActionItem {
 }
 
 type PlayerActionPanelProps = {
+  small_blind: number;
+  pot: number;
   availableActions: ActionItem[];
   onActionSelect: (action: string, amount?: number) => void;
 };
 
 const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
+  small_blind,
+  pot,
   availableActions,
   onActionSelect,
 }) => {
@@ -72,6 +76,7 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
               <Form.Label>Enter Amount</Form.Label>
               <Form.Control
                 type="number"
+                step={small_blind}
                 value={customAmount ?? ""}
                 min={
                   availableActions.find((a) => a.action === selectedAction)
@@ -80,6 +85,23 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
                 onChange={handleAmountChange}
               />
             </Form.Group>
+            <div className="d-flex justify-content-between mt-2">
+              {[
+                Math.round(pot * 0.5),
+                pot,
+                Math.round(pot * 1.5),
+                Math.round(pot * 2),
+              ].map((amt) => (
+                <Button
+                  key={amt}
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => setCustomAmount(amt)}
+                >
+                  {amt}
+                </Button>
+              ))}
+            </div>
             <Button
               variant="success"
               className="mt-2 w-100"

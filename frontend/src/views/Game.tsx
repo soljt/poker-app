@@ -190,8 +190,14 @@ const Game = () => {
           gamePlayers={gameData.players}
         />
       ) : (
-        user?.username === playerToAct && (
+        user?.username === playerToAct &&
+        gameData && (
           <PlayerActionPanel
+            small_blind={gameData.blinds[0]}
+            pot={gameData.pots.reduce(
+              (sum, entry) => (sum = sum + entry.amount),
+              0
+            )}
             availableActions={
               actionList || [{ action: "Nothing", min: 0, allin: false }]
             }
