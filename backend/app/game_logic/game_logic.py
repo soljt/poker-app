@@ -348,7 +348,7 @@ class Pot:
             self.contribution_limit = self.player_contributions[player]
         return 0
 
-    def award_pot(self, ranked_active_players: List[List[Player]]) -> dict[str, list[str] | int]:
+    def award_pot(self, ranked_active_players: List[List[Player]], active_players=set()) -> dict[str, list[str] | int]:
         """
         Given a hand-ranking of active players, award pot to the best-handed player(s) involved in the pot.
         """
@@ -370,7 +370,9 @@ class Pot:
             player.chips += share
             print(f"{player} gets {share}")
         print(f"-------------------------")
-        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share, "hand_rank": Hand.HAND_RANKS[winners[0].best_hand.hand_rank]}
+        pot_players = set([player for player in self.player_contributions])
+        hand_rank = Hand.HAND_RANKS[winners[0].best_hand.hand_rank] if len(pot_players.intersection(active_players)) != 1 else "By Default"
+        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share, "hand_rank": hand_rank}
     
     def refund_pot(self) -> None:
         for player in self.player_contributions:
@@ -455,7 +457,7 @@ class PotCollection:
         
         self.current_pot = curr # update current pot to be the final pot after a round
 
-    def award_pot(self, ranked_active_players: List[List[Player]]) -> list[dict[str, list[str] | int]]:
+    def award_pot(self, ranked_active_players: List[List[Player]], active_players=set()) -> list[dict[str, list[str] | int]]:
         """
         Given a hand-ranked list of players, award the pot(s) to the best player(s) in it (them)
         """
@@ -463,7 +465,7 @@ class PotCollection:
         pot_award_info = []
         pot = self.main_pot
         while pot:         
-            pot_award_info.append(pot.award_pot(ranked_active_players))
+            pot_award_info.append(pot.award_pot(ranked_active_players, active_players))
             pot = pot.next
         print('-' * 80)
         return pot_award_info
@@ -747,7 +749,7 @@ class PokerRound:
             self.deal_board(5 - len(self.board))
 
         ranked_active_players = self.rank_active_players()
-        pot_award_info = self.pot.award_pot(ranked_active_players)
+        pot_award_info = self.pot.award_pot(ranked_active_players, self.active_players)
         return pot_award_info
     
     def determine_must_show_players(self, pot_award_info):
@@ -1353,6 +1355,36 @@ class TestDetermineShowers(unittest.TestCase):
         ranked_active_players = round.rank_active_players()
         pot_award_info = round.pot.award_pot(ranked_active_players)
         self.assertEqual(set([entry["username"] for entry in round.determine_must_show_players(pot_award_info)]), set(["sol", "kenna"]))
+
+class TestShowWinningHand(unittest.TestCase):
+    def test_side_pot(self):
+        p1 = Player("P1", 19000)
+        p2 = Player("P2", 500)
+        p3 = Player("P3", 950)
+        round = PokerRound([p1, p2, p3], 0, 0)
+        round.start_round()
+        round.board = [Card("J", "hearts"), Card("J", "diamonds"), Card("5", "hearts"), Card("Q", "clubs"), Card("5", "diamonds")]
+        player = round.table.btn
+        player.hole_cards = [Card("J", "clubs"), Card("7", "hearts")]
+        player = player.left
+        player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
+        player = player.left
+        player.hole_cards = [Card("10", "diamonds"), Card("3", "hearts")]
+
+        round.apply_player_action(p1, "bet", 900)
+        round.apply_player_action(p2, "call", 900)
+        round.apply_player_action(p3, "call", 900)
+        round.apply_player_action(p3, "fold", None)
+
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            player = player.left
+
+        round.is_action_finished = True
+        round.is_poker_round_over = True
+        pot_award_info = round.end_poker_round()
+        self.assertEqual(pot_award_info[0]["hand_rank"], "Full House")
+        self.assertEqual(pot_award_info[1]["hand_rank"], "By Default")
 
 if __name__ == "__main__":
     unittest.main()
