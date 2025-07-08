@@ -41,17 +41,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SocketContext.Provider value={ws.current}>
-      {isReady ? (
-        <>
-          <div>
-            <ConnectionState socket={ws.current} />
-            <p>{ws.current?.id}</p>
-          </div>{" "}
-          {children}
-        </>
-      ) : (
-        <div>Loading socket connection...</div>
-      )}
+      {isReady ? <>{children}</> : <div>Loading socket connection...</div>}
     </SocketContext.Provider>
   );
 };
