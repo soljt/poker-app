@@ -59,6 +59,7 @@ export default function UserRow({
               <Form.Control
                 type="number"
                 value={formData.chips}
+                step={100}
                 onChange={(e) =>
                   setFormData({ ...formData, chips: +e.target.value })
                 }

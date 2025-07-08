@@ -47,6 +47,7 @@ export default function UserForm({
               name="chips"
               type="number"
               placeholder="Chips"
+              step={100}
               required
             />
           </Form.Group>

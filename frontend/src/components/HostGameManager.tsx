@@ -45,6 +45,7 @@ const HostGameManager = ({
             type="number"
             id={name}
             name={name}
+            step={name === "buy_in" ? 500 : 10}
             value={gameParams[name as keyof GameParams]}
             onChange={handleChange}
             required
