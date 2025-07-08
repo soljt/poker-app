@@ -364,21 +364,27 @@ class Pot:
             group_idx += 1
             winners = [player for player in ranked_active_players[group_idx] if player in self.player_contributions]
         share = self.amount // len(winners)
+        amount = self.amount = share * len(winners) # skim a little off the top if the pot doesn't divide evenly
         print(f"------------- WITHIN POT ------------")
         print(f"splitting {self.amount} among {winners}")
         for player in winners:
+            self.amount -= share
             player.chips += share
             print(f"{player} gets {share}")
         print(f"-------------------------")
         pot_players = set([player for player in self.player_contributions])
         hand_rank = Hand.HAND_RANKS[winners[0].best_hand.hand_rank] if len(pot_players.intersection(active_players)) != 1 else "By Default"
-        return {"winners": [winner.name for winner in winners], "amount": self.amount, "share": share, "hand_rank": hand_rank}
+        return {"winners": [winner.name for winner in winners], "amount": amount, "share": share, "hand_rank": hand_rank}
     
     def refund_pot(self) -> None:
+        if self.amount == 0: # pot has already been awarded or refunded
+            return
         for player in self.player_contributions:
-            # give the player their money pack
+            # give the player their money back
             player.chips += self.player_contributions[player]
+            self.amount -= self.player_contributions[player]
             self.player_contributions[player] = 0 # remove the money from the pot
+            
 
     def serialize(self) -> dict[str, int | list[str]]:
         return {

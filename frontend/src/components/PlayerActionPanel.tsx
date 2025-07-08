@@ -10,6 +10,7 @@ export interface ActionItem {
 type PlayerActionPanelProps = {
   small_blind: number;
   pot: number;
+  timeToKick: number;
   availableActions: ActionItem[];
   onActionSelect: (action: string, amount?: number) => void;
 };
@@ -17,6 +18,7 @@ type PlayerActionPanelProps = {
 const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
   small_blind,
   pot,
+  timeToKick,
   availableActions,
   onActionSelect,
 }) => {
@@ -53,6 +55,9 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
       style={{ zIndex: 1050, minWidth: "300px" }}
     >
       <h5 className="mb-3 text-center">Your Turn</h5>
+      <h6 className="text-center">
+        You'll auto-fold and be kicked in {timeToKick}s
+      </h6>
       <div className="d-flex flex-column gap-2 align-items-center">
         {availableActions.map((action) => (
           <div key={action.action} className="d-flex align-items-center gap-2">

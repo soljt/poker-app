@@ -52,8 +52,12 @@ export default function Lobby() {
   }
 
   function reconnectToGame(game_id: string) {
-    localStorage.setItem("game_id", game_id);
-    navigate("/game");
+    socket.emit("reconnect_to_game", { game_id }, (status: boolean) => {
+      if (status) {
+        localStorage.setItem("game_id", game_id);
+        navigate("/game");
+      }
+    });
   }
 
   useEffect(() => {

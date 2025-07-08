@@ -3,6 +3,7 @@ from app.globals import games, connected_users
 from app.db import db
 from app.models.user import User
 from app.game_logic.game_logic import Player, PokerRound
+from flask_socketio import emit, close_room
 
 class UserValidationError(Exception):
     def __init__(self, reason="Could not find the user in active users"):
@@ -35,6 +36,7 @@ def cashout_player(game: PokerRound, username: str) -> None:
     stack = player.chips
     print(f"cashing out {username}, with {stack} chips")
     update_player_chips(username, get_user_bankroll(username) + stack)
+    player.chips = 0
 
 def get_user_bankroll(username: str) -> int:
     user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
@@ -70,4 +72,16 @@ def remove_user_from_game(game_id: str, username: str):
     games[game_id]["leaver_queue"].remove(username)
     socketio.emit("player_left", {"game_id": game_id, "username": username})  # notify all others to update Lobby
 
+def delete_game(game_id: str):
+    if games[game_id].get("game"):
+        games[game_id]["game"].refund_pot()
+        cashout_all_players(game_id)
+        
+    remove_users_from_game(game_id)
+    del games[game_id]
+    socketio.emit("message", f"Game {game_id} deleted!", to=game_id)
+    socketio.close_room(game_id)
+
+    socketio.emit("game_deleted", {"game_id": game_id})
+    return game_id
                 

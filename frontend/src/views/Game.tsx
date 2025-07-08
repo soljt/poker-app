@@ -19,6 +19,7 @@ const Game = () => {
   const [actionList, setActionList] = useState<Array<ActionItem> | null>(null);
   const [showRoundOver, setShowRoundOver] = useState(false);
   const [countDownTimer, setCountDownTimer] = useState(999);
+  const [kickTimer, setKickTimer] = useState(999);
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
   const [host, setHost] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -94,6 +95,9 @@ const Game = () => {
     socket.on("round_countdown", (data) => {
       setCountDownTimer(data.seconds);
     });
+    socket.on("kick_countdown", (data) => {
+      setKickTimer(data.seconds);
+    });
     socket.on("game_deleted", (game) => {
       if (localStorage.getItem("game_id") === game.game_id) {
         localStorage.removeItem("game_id");
@@ -105,6 +109,7 @@ const Game = () => {
       socket.off("update_game_state");
       socket.off("round_over");
       socket.off("game_deleted");
+      socket.off("kick_countdown");
     };
   }, [socket, navigate]);
 
@@ -136,16 +141,22 @@ const Game = () => {
         ...prev,
         [username]: hand,
       }));
-      socket.on("game_started", () => {
-        setRevealedHands({});
-      });
+    });
+
+    socket.on("game_started", () => {
+      setRevealedHands({});
+    });
+
+    socket.on("player_kicked", () => {
+      navigate("/lobby");
     });
 
     return () => {
       socket.off("hand_revealed");
       socket.off("game_started");
+      socket.off("player_kicked");
     };
-  }, [socket]);
+  }, [socket, navigate]);
 
   const handleShowOwnHand = () => {
     socket.emit("reveal_hand"); // backend can resolve identity via session/auth
@@ -198,6 +209,7 @@ const Game = () => {
               (sum, entry) => (sum = sum + entry.amount),
               0
             )}
+            timeToKick={kickTimer}
             availableActions={
               actionList || [{ action: "Nothing", min: 0, allin: false }]
             }

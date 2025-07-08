@@ -1,8 +1,8 @@
 from flask import request
-from flask_socketio import close_room, emit, join_room, leave_room
+from flask_socketio import emit, join_room, leave_room
 from app.extensions import socketio
 from app.globals import connected_users, games, StatusEnum
-from app.sockets.helpers import cashout_all_players, cashout_player, get_user_bankroll, remove_user_from_game, remove_users_from_game, update_player_chips
+from app.sockets.helpers import cashout_player, delete_game, get_user_bankroll, remove_user_from_game, update_player_chips
 from app.sockets.game_events import create_player_object
 
 def get_game_info(game_id: str):
@@ -55,6 +55,29 @@ def handle_join(data):
     join_room(game_id)
     
     return game_id
+
+@socketio.on("reconnect_to_game")
+def handle_reconnect_to_game(data):
+    username = connected_users[request.sid]["username"] # user must be in this dict due to connecting
+    game_id = data.get("game_id")
+
+    if game_id not in games:
+        emit("error", {"message": "Game not found!"})
+        return False
+    if connected_users[request.sid]["game_id"] != game_id:
+        emit("error", {"message": "You are already in another game!"})
+        return False
+    if not username in games[game_id]["players"]:
+        emit("error", "You're not in this game and therefore cannot reconnect.")
+        return False
+    if not username in games[game_id]["leaver_queue"]:
+        return True
+    else:
+        join_room(game_id)
+        games[game_id]["leaver_queue"].remove(username)
+
+    return True
+
 
 @socketio.on("leave_game")
 def handle_leave(data):
@@ -128,17 +151,7 @@ def handle_delete_game(data):
         emit("error", {"message": "You are not the host or game does not exist."})
         return
 
-    if games[game_id].get("game"):
-        games[game_id]["game"].refund_pot()
-        cashout_all_players(game_id)
-        
-    remove_users_from_game(game_id)
-    del games[game_id]
-    emit("message", f"Game {game_id} deleted!", to=game_id)
-    close_room(game_id)
-
-    emit("game_deleted", {"game_id": game_id}, broadcast=True)
-    return game_id
+    return delete_game(game_id)
 
 @socketio.on("get_games")
 def handle_get_games():
