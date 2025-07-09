@@ -1,10 +1,17 @@
-import { createContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
 import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
 import { admin_api, auth_api, game_api } from "../services/api";
+import { useLocation } from "react-router-dom";
 
 // type for context
 type UserContextType = {
@@ -14,6 +21,7 @@ type UserContextType = {
   loginUser: (username: string, password: string) => void;
   logout: () => void;
   isLoggedIn: () => boolean;
+  refreshUser: () => void;
 };
 
 // required by ts
@@ -25,6 +33,7 @@ const UserContext = createContext<UserContextType>({} as UserContextType);
 // provider called once and then forgotten
 export const UserProvider = ({ children }: Props) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [token, setToken] = useState<string | null>(
     getCookie("csrf_access_token") || null
   );
@@ -41,30 +50,30 @@ export const UserProvider = ({ children }: Props) => {
     if (parts.length === 2) return parts.pop()?.split(";").shift();
   }
 
+  const fetchMe = useCallback(async () => {
+    try {
+      // see if we have the credentials
+      const token = getCookie("csrf_access_token") || null;
+      auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+      game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+      admin_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+      const response = await auth_api.post("/who_am_i", {}); // can throw error
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      setUser(response.data.user);
+      setToken(token);
+    } catch {
+      // should only catch 401 unauth
+      setUser(null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("game_id"); // do not let the user store a game if they fail to auth
+      setToken(null);
+    }
+  }, []);
   // on load, try to fetch user info from server
   useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        // see if we have the credentials
-        const token = getCookie("csrf_access_token") || null;
-        auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-        game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-        admin_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-        const response = await auth_api.post("/who_am_i", {}); // can throw error
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        setUser(response.data.user);
-        setToken(token);
-      } catch {
-        // should only catch 401 unauth
-        setUser(null);
-        localStorage.removeItem("user");
-        localStorage.removeItem("game_id"); // do not let the user store a game if they fail to auth
-        setToken(null);
-      }
-    };
     fetchMe();
     setIsReady(true);
-  }, []);
+  }, [location, fetchMe]);
 
   const contextValue = useMemo(() => {
     // register a new user
@@ -77,6 +86,10 @@ export const UserProvider = ({ children }: Props) => {
           }
         })
         .catch((e) => toast.warning("Server error occurred", e));
+    };
+
+    const refreshUser = () => {
+      fetchMe();
     };
 
     // login the user
@@ -118,8 +131,9 @@ export const UserProvider = ({ children }: Props) => {
       loginUser,
       logout,
       isLoggedIn,
+      refreshUser,
     };
-  }, [user, token, navigate]);
+  }, [user, token, navigate, fetchMe]);
 
   return (
     <UserContext.Provider value={contextValue}>

@@ -61,7 +61,14 @@ function NavbarComponent() {
         </Navbar.Collapse>
         <div className="d-none d-lg-block ms-auto">
           {isLoggedIn() && (
-            <span className="fw-semibold">Welcome, {user?.username}</span>
+            <div className="d-none d-lg-flex align-items-center ms-auto">
+              <div className="text-end me-3">
+                <div className="fw-semibold">Welcome, {user?.username}</div>
+                <div className="badge bg-primary-subtle text-primary-emphasis">
+                  💰 {user?.chips.toLocaleString()} Chips
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </Container>

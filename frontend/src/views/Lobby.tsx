@@ -9,7 +9,7 @@ import { Roles } from "../types.ts";
 import { useSocket } from "../context/useSocket.tsx";
 
 export default function Lobby() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
   const [games, setGames] = useState<LobbyEntry[]>([]);
@@ -60,11 +60,12 @@ export default function Lobby() {
     });
   }
 
+  // Request list on load
   useEffect(() => {
     socket.emit("get_games", (gameList: LobbyEntry[]) => {
       setGames(gameList);
       console.log("received on refresh:", gameList);
-    }); // Request list on load
+    });
   }, [socket]);
 
   // create all event listeners...would it be better to just have send the new games list from the backend
@@ -86,11 +87,11 @@ export default function Lobby() {
       if (localStorage.getItem("game_id") === game.game_id) {
         localStorage.removeItem("game_id");
       }
+      refreshUser();
       setGames((prev) => prev.filter((entry) => entry.game_id != game.game_id));
     });
 
     socket.on("player_joined", (data) => {
-      toast.info(`${data.username} joined ${data.game_id}`);
       setGames((prevGames) =>
         prevGames.map((game) => {
           if (game.game_id === data.game_id) {
@@ -105,7 +106,6 @@ export default function Lobby() {
     });
 
     socket.on("player_queued", (data) => {
-      toast.info(`${data.username} queued for ${data.game_id}`);
       setGames((prevGames) =>
         prevGames.map((game) => {
           if (game.game_id === data.game_id) {
@@ -120,7 +120,6 @@ export default function Lobby() {
     });
 
     socket.on("player_left", (data) => {
-      toast.info(`${data.username} left ${data.game_id}`);
       setGames((prevGames) =>
         prevGames.map((game) => {
           if (game.game_id === data.game_id) {
@@ -135,7 +134,6 @@ export default function Lobby() {
     });
 
     socket.on("player_dequeued", (data) => {
-      toast.info(`${data.username} dequeued from ${data.game_id}`);
       setGames((prevGames) =>
         prevGames.map((game) => {
           if (game.game_id === data.game_id) {
@@ -153,6 +151,10 @@ export default function Lobby() {
 
     socket.on("game_started", startGame);
 
+    socket.on("chips_updated", () => {
+      refreshUser();
+    });
+
     return () => {
       console.log("cleanup");
       socket.off("game_created");
@@ -162,8 +164,9 @@ export default function Lobby() {
       socket.off("player_left");
       socket.off("player_queued");
       socket.off("player_dequeued");
+      socket.off("chips_updated");
     };
-  }, [navigate, socket]);
+  }, [navigate, socket, refreshUser]);
 
   return (
     <>
