@@ -4,8 +4,11 @@ import sys
 from types import NoneType
 import unittest
 from typing import List, Tuple, Union
-from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
-# from exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
+if __name__ == "__main__":
+    from exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
+else:
+    from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError
+
 
 class Card:
     RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -870,7 +873,7 @@ class PokerRound:
                 starting_player = self.table.sb
         
         # TODO should this be somewhere else? Should "set_player_to_act" do this?
-        while last_to_act.folded:
+        while last_to_act.folded or last_to_act.allin:
             last_to_act = last_to_act.right
             
         return starting_player, last_to_act
@@ -1392,15 +1395,47 @@ class TestShowWinningHand(unittest.TestCase):
         self.assertEqual(pot_award_info[0]["hand_rank"], "Full House")
         self.assertEqual(pot_award_info[1]["hand_rank"], "By Default")
 
+class TestBugs(unittest.TestCase):
+    def test_allin_player_bug(self):
+        game = PokerRound([Player("kenna", 400), Player("hotbrian", 980), Player("soljt", 1620)], 10, 20)
+
+        actions = ["call", "call", "reraise 450", "call", "call"] + ["check"] * 6
+        game.start_round()
+        i = 0
+        while i < len(actions):
+            data = game.get_player_to_act_and_actions()
+            player = data["player_to_act"]
+            response = actions[i].split(" ")
+            if len(response) < 2:
+                game.handle_player_action(player, response[0], None)
+            else:
+                game.handle_player_action(player, response[0], int(response[1]))
+            i += 1
+
+
+        self.assertTrue(game.is_poker_round_over)
+
 if __name__ == "__main__":
     unittest.main()
 
-    # game = PokerRound([Player("soljt", 1000), Player("kenna", 500)], 25, 50)
+    # game = PokerRound([Player("kenna", 400), Player("hotbrian", 980), Player("soljt", 1620)], 10, 20)
 
-
+    # actions = ["call", "call", "reraise 450", "call", "call"]
     # game.start_round()
-
+    # i = 0
     # while not game.is_action_finished:
+        
+    #     if i < len(actions):
+    #         data = game.get_player_to_act_and_actions()
+    #         player = data["player_to_act"]
+    #         response = actions[i].split(" ")
+    #         if len(response) < 2:
+    #             game.handle_player_action(player, response[0], None)
+    #         else:
+    #             game.handle_player_action(player, response[0], int(response[1]))
+    #         i += 1
+    #         continue
+
     #     data = game.get_player_to_act_and_actions()
     #     player = data["player_to_act"]
     #     actions = data["available_actions"]
@@ -1409,9 +1444,10 @@ if __name__ == "__main__":
     #         game.handle_player_action(player, response[0], None)
     #     else:
     #         game.handle_player_action(player, response[0], int(response[1]))
-    #     for username in game.get_players():
-    #         json_data = game.serialize_for_player(username)
-    #         print(json_data)
+
+    #     # for username in game.get_players():
+    #     #     json_data = game.serialize_for_player(username)
+    #     #     print(json_data)
 
     # pot_award_info = game.end_poker_round()
     # must_show_players = game.determine_must_show_players(pot_award_info)
