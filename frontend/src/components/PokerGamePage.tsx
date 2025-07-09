@@ -14,25 +14,25 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
     small_blind_player,
     big_blind_player,
     player_to_act,
-    my_bet,
     my_chips,
     phase,
-    table_bet,
   } = gameData;
   const { user } = useAuth();
 
   return (
-    <div className="container my-4">
+    <div className="container my-4" style={{ paddingBottom: "150px" }}>
       <h2 className="text-center mb-4">Poker Game{phase && `: ${phase}`}</h2>
 
       <div className="row mb-4">
         <div className="col-md-4">
           <div className="card text-bg-light mb-3">
-            <div className="card-header">Blinds</div>
+            <div className="card-header">Blinds and Chips</div>
             <div className="card-body">
               <p className="card-text">
                 Small Blind: {blinds[0]} | Big Blind: {blinds[1]}
               </p>
+              <p>My Chips (at the table): {my_chips}</p>
+              <p>Wallet: {user?.chips}</p>
             </div>
           </div>
         </div>
@@ -102,34 +102,20 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
         </div>
       </div>
 
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <div className="card text-bg-light mb-3">
-            <div className="card-header">My Stack & Bankroll</div>
-            <div className="card-body">
-              <p>My Chips (at the table): {my_chips}</p>
-              <p>Wallet: {user?.chips}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="card text-bg-light mb-3">
-            <div className="card-header">This Betting Round</div>
-            <div className="card-body">
-              <p>My Bet: {my_bet}</p>
-              <p>Table Bet: {table_bet}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="row">
         <div className="col">
           <div className="card text-bg-light">
             <div className="card-header">Pot</div>
             <div className="card-body">
               {pots.map((pot, index) => (
-                <div key={index} className="mb-2">
+                <div
+                  key={index}
+                  className="border p-2 mb-3 rounded bg-white text-dark"
+                >
+                  <strong>
+                    {index === 0 ? "Main Pot" : `Side Pot ${index}`}
+                  </strong>
+                  <br />
                   <strong>Amount:</strong> {pot.amount} <br />
                   <strong>Contenders:</strong> {pot.players.join(", ")}
                 </div>

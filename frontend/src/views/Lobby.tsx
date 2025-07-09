@@ -149,6 +149,13 @@ export default function Lobby() {
       );
     });
 
+    socket.on("player_removed", (game_id) => {
+      localStorage.setItem("game_id", "");
+      socket.emit("leave_room", {
+        game_id,
+      });
+    });
+
     socket.on("game_started", startGame);
 
     socket.on("chips_updated", () => {

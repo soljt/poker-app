@@ -151,10 +151,18 @@ const Game = () => {
       navigate("/lobby");
     });
 
+    socket.on("player_removed", (game_id) => {
+      localStorage.setItem("game_id", "");
+      socket.emit("leave_room", {
+        game_id,
+      });
+    });
+
     return () => {
       socket.off("hand_revealed");
       socket.off("game_started");
       socket.off("player_kicked");
+      socket.off("player_removed");
     };
   }, [socket, navigate]);
 
@@ -164,7 +172,7 @@ const Game = () => {
 
   return (
     <>
-      <Container>
+      <Container className="mt-4">
         {user?.username == host ? (
           <Button variant="danger" onClick={() => handleOpenConfirm("end")}>
             End Game
