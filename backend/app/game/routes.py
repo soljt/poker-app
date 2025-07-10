@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from flask_jwt_extended import current_user, jwt_required
 from app.game import game
-from app.globals import games
+import app.state as state
 
 @game.route("/state", methods=["GET"])
 @jwt_required()
@@ -9,16 +9,16 @@ def get_game_state():
     game_id = request.args.get("game_id")
     username = current_user.username
 
-    if not game_id in games:
+    if not state.check_game_id(game_id):
         return jsonify({"error": "Game does not exist."})
     
-    if not games[game_id].get("game"):
+    if not state.get_game(game_id):
         return jsonify({"error": "Game has not started - no game object."})
     
-    if not username in games.get(game_id).get("players"):
+    if not username in state.get_players(game_id):
         return jsonify({"error": f"Could not find user {username} in player list for game_id {game_id}."})
     
-    response = games[game_id]["game"].serialize_for_player(username)
+    response = state.get_game(game_id).serialize_for_player(username)
     try:
         response = jsonify(response)
     except Exception as e:
@@ -35,13 +35,10 @@ def get_game_host():
     game_id = request.args.get("game_id")
     username = current_user.username
 
-    if not game_id in games:
-        return jsonify({"error": "Game does not exist."})
+    if not state.check_game_id(game_id) or not username in state.get_players(game_id):
+        return jsonify({"error": "Could not retrieve host"})
     
-    if not username in games.get(game_id).get("players"):
-        return jsonify({"error": f"Could not find user {username} in player list for game_id {game_id}."})
-    
-    response = {"host": games[game_id]["host"]}
+    response = {"host": state.get_host(game_id)}
     try:
         response = jsonify(response)
     except Exception as e:

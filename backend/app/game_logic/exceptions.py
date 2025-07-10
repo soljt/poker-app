@@ -18,3 +18,8 @@ class NotPlayersTurnError(PokerValidationError):
     def __init__(self, player):
         super().__init__(f"It is not {player.name}'s turn.")
         self.player = player
+
+class TooManyPlayersError(PokerValidationError):
+    def __init__(self, max_seats):
+        super().__init__(f"Attempted to exceed max_seats={max_seats}")
+        self.max_seats = max_seats

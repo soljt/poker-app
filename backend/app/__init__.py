@@ -10,9 +10,13 @@ from app.models.user import User
 from sqlalchemy.exc import IntegrityError
 from config import Config
 
-def create_app(config_class=Config):
+def create_app(config_class=Config, testing=False):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    if testing:
+        app.config["TESTING"] = True
+        app.config["WTF_CSRF_ENABLED"] = False
 
     # initialize extensions
     # CORS

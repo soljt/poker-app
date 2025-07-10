@@ -1,8 +1,9 @@
 from app.home import home
 from app.db import db
 from app.models.user import User
-from app.globals import games, connected_users
 from flask import session
+from app.globals import connected_users
+import app.state as state
 
 # DEBUG ONLY: print db contents
 @home.route("/")
@@ -15,6 +16,6 @@ def hello_world():
 @home.route("/print_games")
 def print_games():
     lines = []
-    lines.append(f"<h4>game_ids: {[{game_id} for game_id in games]}</h4>")
-    lines.append(f"<h4>connected users: {[f"SID: {sid}, dict: {user_game}\n" for sid, user_game in connected_users.items()]}</h4>")
+    lines.append(f"<h4>game_ids: {[{game_id} for game_id in state.get_game_ids()]}</h4>")
+    lines.append(f"<h4>connected users:</h4> {"".join([f"<h4>SID: {sid}, dict: {user_game}</h4>" for sid, user_game in connected_users.items()])}")
     return "\n".join(lines)
