@@ -1,3 +1,6 @@
 scrap.py
 poker-env/
 **/__pycache__/
+
+*.pyc
+*.db
