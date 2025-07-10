@@ -87,7 +87,6 @@ export default function Lobby() {
       if (localStorage.getItem("game_id") === game.game_id) {
         localStorage.removeItem("game_id");
       }
-      refreshUser();
       setGames((prev) => prev.filter((entry) => entry.game_id != game.game_id));
     });
 

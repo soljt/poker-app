@@ -22,7 +22,7 @@ const LobbyList: React.FC<Props> = ({
   reconnectToGame,
 }) => {
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: "150px" }}>
       {games.length === 0 ? (
         <p className="text-center text-muted">No games available.</p>
       ) : (

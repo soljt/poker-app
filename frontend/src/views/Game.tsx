@@ -61,7 +61,6 @@ const Game = () => {
         .then((response) => {
           if (response.data.error) {
             toast.warn(response.data.error);
-            setErrorMessage(response.data.error);
           } else {
             setHost(response.data.host);
             console.log("host set as:", response.data.host);
