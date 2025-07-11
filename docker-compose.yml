@@ -1,0 +1,39 @@
+services:
+  backend:
+    build: ./backend
+    container_name: poker-backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://pokeruser:pokerpass@db:5432/pokerdb
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    container_name: poker-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres
+    container_name: poker-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: pokeruser
+      POSTGRES_PASSWORD: pokerpass
+      POSTGRES_DB: pokerdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
