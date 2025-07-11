@@ -21,7 +21,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_API_BASE_URL || "", {
-      path: "/socket.io", // added this
+      path: import.meta.env.VITE_API_BASE_URL ? "" : "/socket.io", // added this
       withCredentials: true,
     }); // "http://localhost:5000"
     socket.on("connect", () => {

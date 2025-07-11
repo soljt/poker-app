@@ -1,8 +1,10 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 
-import eventlet
-eventlet.monkey_patch()
+if os.getenv("FLASK_ENV") == "production":
+    import eventlet
+    eventlet.monkey_patch()
 
 from .extensions import jwt, socketio
 from app.db import init_db
@@ -20,7 +22,10 @@ def create_app(config_class=Config, testing=False):
 
     # initialize extensions
     # CORS
-    CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:5173", "http://localhost", "http://localhost:80"]}})
+    origin_list = ["http://localhost:5173", "http://localhost", "http://localhost:80"]
+    if os.getenv("FLASK_ENV") == "production":
+        origin_list = ["https://poker.soljt.ch", "https://www.poker.soljt.ch"]
+    CORS(app, supports_credentials=True, resources={r"/*": {"origins": origin_list}})
     # db - see db.py
     init_db(app)
     # jwt (auth)

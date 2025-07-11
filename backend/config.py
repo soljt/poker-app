@@ -10,12 +10,12 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-jwt")
 
-    # if os.getenv("FLASK_ENV") != "production":
-    JWT_COOKIE_SECURE = False # DEBUG ONLY: set true when released
-    JWT_COOKIE_SAMESITE = "Lax" # required for cookie inclusing in requests between diff domains
-    # else:
-    #     JWT_COOKIE_SECURE = True # DEBUG ONLY: set true when released
-    #     JWT_COOKIE_SAMESITE = "None" # required for cookie inclusing in requests between diff domains
+    if os.getenv("FLASK_ENV") != "production":
+        JWT_COOKIE_SECURE = False # DEBUG ONLY: set true when released
+        JWT_COOKIE_SAMESITE = "Lax" # required for cookie inclusing in requests between diff domains
+    else:
+        JWT_COOKIE_SECURE = True # DEBUG ONLY: set true when released
+        JWT_COOKIE_SAMESITE = "None" # required for cookie inclusing in requests between diff domains
     
     JWT_CSRF_IN_COOKIES = True # send the csrf token via cookie so that the frontend can grab from browser
     JWT_TOKEN_LOCATION = ["cookies"] # allows jwt in http-only cookie (protect against XSS attack)

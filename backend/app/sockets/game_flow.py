@@ -8,7 +8,7 @@ from app.timer.inaction_timer import InactionTimer
 import app.state as state
 from app.globals import StatusEnum
 
-def emit_player_turn(game_id: str, delay=30):
+def emit_player_turn(game_id: str, delay=45):
     game = state.get_game(game_id)
     data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
     socketio.emit("player_turn", data, to=game_id)
