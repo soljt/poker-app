@@ -44,6 +44,9 @@ def connect_handler(auth):
         print("JWT Signature Expired!")
         return False
 
+@socketio.on_error_default
+def default_error_handler(e):
+    print(f"Socket.IO error: {str(e)}")
 
 @socketio.on("disconnect")
 def disconnect_handler(reason):

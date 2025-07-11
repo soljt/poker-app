@@ -78,7 +78,7 @@ def emit_next_player_turn(game_id: str) -> bool:
 
         # if the player left the game, fold for them
         if data["player_to_act"] in state.get_leaver_queue(game_id):
-            print(f"{data["player_to_act"]} has left - auto-folding")
+            print(f"{data['player_to_act']} has left - auto-folding")
             handle_player_action_and_emit_state(game_id, data["player_to_act"], "fold", None)
             continue
         else:

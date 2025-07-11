@@ -1,14 +1,14 @@
-from datetime import datetime, timedelta, timezone
-from flask import Flask, request, session, jsonify
+from flask import Flask
 from flask_cors import CORS
+
+import eventlet
+eventlet.monkey_patch()
+
 from .extensions import jwt, socketio
-from flask_jwt_extended import create_access_token, current_user, decode_token, get_csrf_token, get_jwt, get_jwt_identity, jwt_required, set_access_cookies, unset_jwt_cookies
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from app.game_logic.game_logic import PokerRound, Player
-from app.db import init_db, db
-from app.models.user import User
-from sqlalchemy.exc import IntegrityError
+from app.db import init_db
 from config import Config
+from app.models.user import User
+
 
 def create_app(config_class=Config, testing=False):
     app = Flask(__name__)
@@ -20,7 +20,7 @@ def create_app(config_class=Config, testing=False):
 
     # initialize extensions
     # CORS
-    CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:5173"}})
+    CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:5173", "http://localhost", "http://localhost:80"]}})
     # db - see db.py
     init_db(app)
     # jwt (auth)
@@ -48,11 +48,3 @@ def create_app(config_class=Config, testing=False):
     app.register_blueprint(admin_bp)
 
     return app
-
-############################# AUTHENTICATION ##########################################
-
-######################### UTIL METHODS ######################################
-
-# with app.test_request_context():
-#     print(url_for('hello_world'))
-#     print(url_for('hello_you', name='John Doe'))

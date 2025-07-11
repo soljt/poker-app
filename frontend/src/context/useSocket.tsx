@@ -10,7 +10,7 @@ import {
   handleSocketError,
   handleSocketMessage,
 } from "../helpers/SocketAlertHandler";
-import { ConnectionState } from "../components/ConnectionState";
+// import { ConnectionState } from "../components/ConnectionState";
 
 const SocketContext = createContext<Socket | null>(null);
 
@@ -20,7 +20,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const socket = io("http://localhost:5000", { withCredentials: true });
+    const socket = io(import.meta.env.VITE_API_BASE_URL || "", {
+      path: "/socket.io", // added this
+      withCredentials: true,
+    }); // "http://localhost:5000"
     socket.on("connect", () => {
       console.log("Socket connected: ", socket.id);
       setIsReady(true);
@@ -36,6 +39,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     ws.current = socket;
     return () => {
       socket.disconnect();
+      socket.off("error", handleSocketError);
+      socket.off("message", handleSocketMessage);
     };
   }, []);
 

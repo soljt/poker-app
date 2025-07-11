@@ -1,7 +1,7 @@
-import { useAuth } from "../context/useAuth";
+import { useSocket } from "../context/useSocket";
 
 export function ConnectionManager() {
-  const { socket } = useAuth();
+  const socket = useSocket();
   function connect() {
     socket?.connect();
   }

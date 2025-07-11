@@ -42,7 +42,7 @@ def logout():
 @auth.route("/register", methods=["POST"])
 def register():
     data = request.json
-    new_usr = User(data["username"], data["chips"], data["password"]) 
+    new_usr = User(username=data["username"], chips=5000, password=data["password"]) 
     try:
         db.session.add(new_usr)
         db.session.commit()    

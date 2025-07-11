@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
+
 function getCookie(name: string) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -7,21 +9,21 @@ function getCookie(name: string) {
 }
 
 export const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: baseURL, // "http://localhost:5000"
 });
 
 export const auth_api = axios.create({
-  baseURL: "http://localhost:5000/auth",
+  baseURL: baseURL + "/auth", // "http://localhost:5000/auth"
   withCredentials: true,
 });
 
 export const game_api = axios.create({
-  baseURL: "http://localhost:5000/game",
+  baseURL: baseURL + "/game", // "http://localhost:5000/game"
   withCredentials: true,
 });
 
 export const admin_api = axios.create({
-  baseURL: "http://localhost:5000/admin",
+  baseURL: baseURL + "/admin", //"http://localhost:5000/admin"
   withCredentials: true,
 });
 

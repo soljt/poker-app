@@ -12,7 +12,7 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.Text)
     chips = db.Column(db.Integer, default=1000)
     role = db.Column(db.Enum(RoleEnum), default=RoleEnum.player)
 
@@ -20,9 +20,7 @@ class User(db.Model):
         self.username = username
         self.chips = chips
         self.set_password(password)
-        print(role)
         self.role = role
-        print(self.role)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
