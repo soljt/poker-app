@@ -8,20 +8,23 @@ export default function Login() {
   const navigate = useNavigate();
   const { isLoggedIn, loginUser } = useAuth();
   const location = useLocation();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     try {
       if (isLoggedIn()) {
         const redirectPath = location.state?.from?.pathname || "/";
-        navigate(redirectPath);
+        if (username == "kenna" && redirectPath != "/game") {
+          navigate("/");
+        } else {
+          navigate(redirectPath);
+        }
       }
     } catch {
       toast.warning("Something bad");
     }
-  }, [isLoggedIn, location.state?.from?.pathname, navigate]);
-
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  }, [isLoggedIn, location.state?.from?.pathname, navigate, username]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();

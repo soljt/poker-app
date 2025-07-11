@@ -8,9 +8,10 @@ import RoundOverOverlay from "../components/NewRoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
 import { useSocket } from "../context/useSocket";
-import { Button, Container } from "react-bootstrap";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import ConfirmActionModal from "../components/ConfirmActionModel";
 import { useNavigate } from "react-router-dom";
+import HandRankModal from "../components/HandRankModal";
 
 const Game = () => {
   const [gameData, setGameData] = useState<GameData | null>(null);
@@ -172,15 +173,28 @@ const Game = () => {
   return (
     <>
       <Container className="mt-4">
-        {user?.username == host ? (
-          <Button variant="danger" onClick={() => handleOpenConfirm("end")}>
-            End Game
-          </Button>
-        ) : (
-          <Button variant="danger" onClick={() => handleOpenConfirm("leave")}>
-            Leave Game
-          </Button>
-        )}
+        <Row className="align-items-center justify-content-between">
+          <Col xs="auto">
+            {user?.username == host ? (
+              <Button variant="danger" onClick={() => handleOpenConfirm("end")}>
+                End Game
+              </Button>
+            ) : (
+              <Button
+                variant="danger"
+                onClick={() => handleOpenConfirm("leave")}
+              >
+                Leave Game
+              </Button>
+            )}
+          </Col>
+
+          <Col xs="auto" className="ms-auto">
+            {/* Modal button placed to the right, same size */}
+            <HandRankModal />
+          </Col>
+        </Row>
+
         <ConfirmActionModal
           show={showConfirm}
           onClose={() => setShowConfirm(false)}

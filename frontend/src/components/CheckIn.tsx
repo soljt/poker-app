@@ -9,8 +9,11 @@ export function CheckIn() {
 
   return (
     <>
-      <div className="d-flex justify-content-left">
-        <button className="btn btn-primary btn-lg" onClick={handleClickCheckIn}>
+      <div className="d-flex justify-content-center">
+        <button
+          className="btn btn-lg btn-primary btn-block"
+          onClick={handleClickCheckIn}
+        >
           View Available Games
         </button>
       </div>
