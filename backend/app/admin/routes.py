@@ -37,10 +37,13 @@ def update_user(user_id):
     user = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none()
     if not user:
         abort(404)
-    if data.get("role") == RoleEnum.admin.value: # cannot promote to admin!
-        abort(401)
-    if "role" in data and user.role == RoleEnum.admin: # cannot demote from admin!
+    if user != current_user:
+        if data.get("role") == RoleEnum.admin.value: # cannot promote to admin!
+            abort(401)
+            return
+    if data.get("role") != "admin" and user.role == RoleEnum.admin: # cannot demote from admin!
         abort(401) 
+        return
     if "chips" in data:
         user.chips = data["chips"]
     if "role" in data:

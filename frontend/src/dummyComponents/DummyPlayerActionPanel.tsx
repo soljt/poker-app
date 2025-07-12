@@ -49,6 +49,39 @@ const DummyPlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
     }
   };
 
+  function generateInterpolatedValues(
+    pot: number,
+    availableActions: ActionItem[],
+    smallBlind: number
+  ): number[] {
+    const relevantActions = ["bet", "raise", "reraise"];
+
+    // Find the first (and only) relevant action with a non-null min
+    const relevantAction = availableActions.find(
+      (a) => relevantActions.includes(a.action) && a.min !== null
+    );
+
+    if (!relevantAction || relevantAction.min === null) {
+      throw new Error("No valid betting action found.");
+    }
+
+    const minValue = relevantAction.min;
+    const minBound = Math.max(minValue, 0.5 * pot);
+    const maxBound = Math.max(2 * pot, 2 * minValue);
+
+    // Generate 4 linearly spaced values
+    const steps = 3;
+    const rawValues: number[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const interpolated = minBound + (i * (maxBound - minBound)) / steps;
+      // Round to nearest multiple of smallBlind
+      const rounded = Math.round(interpolated / smallBlind) * smallBlind;
+      rawValues.push(rounded);
+    }
+
+    return rawValues;
+  }
+
   return (
     <div
       className="bg-light shadow p-3 rounded mb-4"
@@ -91,12 +124,11 @@ const DummyPlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
               />
             </Form.Group>
             <div className="d-flex justify-content-between mt-2">
-              {[
-                Math.round(pot * 0.5),
+              {generateInterpolatedValues(
                 pot,
-                Math.round(pot * 1.5),
-                Math.round(pot * 2),
-              ].map((amt) => (
+                availableActions,
+                small_blind
+              ).map((amt) => (
                 <Button
                   key={amt}
                   variant="outline-primary"

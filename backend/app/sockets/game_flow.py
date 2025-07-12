@@ -38,6 +38,7 @@ def emit_round_over(game_id: str):
 
 def emit_revealed_hands(game_id: str, pot_award_info: dict):
     must_show_players = state.get_game(game_id).determine_must_show_players(pot_award_info)
+    print("must_show_players:", must_show_players)
     for entry in must_show_players:
         socketio.emit("hand_revealed", entry, to=game_id)
 

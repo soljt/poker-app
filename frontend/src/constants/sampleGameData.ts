@@ -28,7 +28,7 @@ export const mockPotAwards = [
 ];
 
 export const mockAvailableActions = [
-  { action: "Fold", min: null, allin: false },
-  { action: "Call", min: null, allin: false },
-  { action: "Raise", min: 100, allin: false },
+  { action: "fold", min: null, allin: false },
+  { action: "call", min: null, allin: false },
+  { action: "raise", min: 100, allin: false },
 ];
