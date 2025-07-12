@@ -1,4 +1,4 @@
-import { GameStatus, LobbyEntry } from "../types";
+import { GameStatus, LobbyEntry, Roles } from "../types";
 import { User } from "../models/User";
 import { Button, Card, ListGroup } from "react-bootstrap";
 
@@ -95,16 +95,18 @@ const LobbyList: React.FC<Props> = ({
                         </Button>
                       )
                     )}
-                    {game.host === user?.username ? (
+                    {(game.host === user?.username ||
+                      user?.role === Roles.admin) && (
                       <Button
                         variant="danger"
                         onClick={() => deleteGame(game.game_id, user.username)}
                       >
                         Delete
                       </Button>
-                    ) : (
-                      (game.players.includes(user?.username || "") ||
-                        game.joiner_queue.includes(user?.username || "")) && (
+                    )}{" "}
+                    {(game.players.includes(user?.username || "") ||
+                      game.joiner_queue.includes(user?.username || "")) &&
+                      game.host !== user?.username && (
                         <Button
                           variant="outline-danger"
                           onClick={() =>
@@ -114,8 +116,7 @@ const LobbyList: React.FC<Props> = ({
                         >
                           Leave
                         </Button>
-                      )
-                    )}
+                      )}
                     {game.players.includes(user?.username || "") &&
                       (game.status === GameStatus.in_progress ||
                         game.status === GameStatus.between_hands) && (

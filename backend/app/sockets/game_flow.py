@@ -43,8 +43,18 @@ def emit_revealed_hands(game_id: str, pot_award_info: dict):
 
 def cleanup_leavers(game_id: str):
     if state.get_host(game_id) in state.get_leaver_queue(game_id):
-        delete_game(game_id)
-        return False
+        socketio.emit("message", "Game host went bankrupt - assigning new host.", to=game_id)
+        print(state.get_players(game_id))
+        print(state.get_leaver_queue(game_id))
+        eligible_players = set(state.get_players(game_id)).difference(set(state.get_leaver_queue(game_id)))
+        print(eligible_players)
+        if not eligible_players:
+            socketio.emit("error", {"message": "No one was eligible to be the next host."})
+            delete_game(game_id)
+            return False
+        else:
+            state.set_host(game_id, eligible_players.pop())
+            print(f"setting new host as {state.get_host(game_id)}")
 
     for username in state.get_leaver_queue(game_id)[:]:
         print(f"removing {username} from {game_id}")
@@ -122,7 +132,7 @@ def kick_broke_players(game_id: str):
     small_blind_amount = state.get_small_blind(game_id)
     for username in state.get_players(game_id):
         if game.get_player(username).chips <= small_blind_amount:
-            socketio.emit("message", "You don't have enough chips to continue. Removing you from the game.", to=username)
+            socketio.emit("message", "You don't have enough chips to continue. You won't be joining the next hand unless you re-buy-in.", to=username)
             state.append_to_leaver_queue(game_id, username)
     
 def handle_end_of_round(game_id):

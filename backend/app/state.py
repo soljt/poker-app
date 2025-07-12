@@ -33,6 +33,9 @@ def remove_game(game_id: str):
 def get_host(game_id:str) -> str:
     return games.get(game_id, {}).get("host")
 
+def set_host(game_id:str, username: str):
+    games.get(game_id, {})["host"] = username
+
 def get_buy_in(game_id:str) -> int:
     return games.get(game_id, {}).get("buy_in")
 

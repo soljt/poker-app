@@ -31,6 +31,11 @@ def get_user_bankroll(username: str) -> int:
     user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
     return user.chips if user else 0
    
+# user db object
+def get_user_role(username: str):
+    user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
+    return user.role if user else ""
+
 def update_player_chips(username, amount):
     if amount < 0:
         raise Exception("Cannot have a negative chip balance!")
