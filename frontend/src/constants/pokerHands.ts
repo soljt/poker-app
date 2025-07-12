@@ -46,7 +46,7 @@ export const pokerHands = [
   },
   {
     title: "Flush",
-    description: "Any 5 cards of the same suit. Referred to as \"broadway\" when made with the highest 5 cards.",
+    description: "Any 5 cards of the same suit.",
     cards: [
       "2 of clubs",
       "5 of clubs",
@@ -57,7 +57,7 @@ export const pokerHands = [
   },
   {
     title: "Straight",
-    description: "5 consecutive cards of mixed suits.",
+    description: "5 consecutive cards of mixed suits. Referred to as \"broadway\" when made with the highest 5 cards.",
     cards: [
       "6 of diamonds",
       "7 of hearts",

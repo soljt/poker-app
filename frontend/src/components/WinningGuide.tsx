@@ -22,7 +22,7 @@ const WinningGuide: React.FC = () => {
                 </Card.Title>
                 <Card.Text className="fs-5 text-muted">
                   If all other players fold during betting, the last remaining
-                  player wins the pot immediately wihtout the need to reveal
+                  player wins the pot immediately without the need to reveal
                   their hand. You still can if you want though! Mind games...
                 </Card.Text>
               </Card.Body>

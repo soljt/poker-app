@@ -12,12 +12,10 @@ const SpecialLanding: React.FC = () => {
           <Card.Title>
             <h1 className="display-3 text-danger">Hi sweetheart 💕</h1>
           </Card.Title>
-          <Card.Text>
-            <p className="fs-4 fw-bold mt-4">
-              I made this special page just for you. Nobody else can even see it
-              at all!!! I also custom-made the background on iPadmé 😎. I hope
-              you're loving me! Mwah 😘
-            </p>
+          <Card.Text className="fs-4 fw-bold mt-4 mb-5">
+            I made this special page just for you. Nobody else can even see it
+            at all!!! I also custom-made the background on iPadmé 😎. I hope
+            you're loving me! Mwah 😘
           </Card.Text>
         </Card.Body>
       </Card>

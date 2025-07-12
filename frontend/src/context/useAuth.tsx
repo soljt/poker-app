@@ -37,11 +37,10 @@ export const UserProvider = ({ children }: Props) => {
   const [token, setToken] = useState<string | null>(
     getCookie("csrf_access_token") || null
   );
-  const [user, setUser] = useState<User | null>(
-    localStorage.getItem("user")
-      ? JSON.parse(localStorage.getItem("user") || "") // would throw an error if we tried to JSON.parse("")
-      : null
-  );
+  const [user, setUser] = useState<User | null>(null);
+  // localStorage.getItem("user")
+  // ? JSON.parse(localStorage.getItem("user") || "") // would throw an error if we tried to JSON.parse("")
+  // :
   const [isReady, setIsReady] = useState(false);
 
   function getCookie(name: string) {
@@ -58,13 +57,13 @@ export const UserProvider = ({ children }: Props) => {
       game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
       admin_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
       const response = await auth_api.post("/who_am_i", {}); // can throw error
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      // localStorage.setItem("user", JSON.stringify(response.data.user));
       setUser(response.data.user);
       setToken(token);
     } catch {
       // should only catch 401 unauth
       setUser(null);
-      localStorage.removeItem("user");
+      // localStorage.removeItem("user");
       localStorage.removeItem("game_id"); // do not let the user store a game if they fail to auth
       setToken(null);
     }
@@ -103,7 +102,7 @@ export const UserProvider = ({ children }: Props) => {
             game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
 
             const res = await auth_api.post("/who_am_i", {});
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+            // localStorage.setItem("user", JSON.stringify(res.data.user));
             setUser(res.data.user);
             toast.success(res.data.message);
           }
@@ -119,7 +118,7 @@ export const UserProvider = ({ children }: Props) => {
       await logoutAPI().then((res) => {
         toast.success(res?.data.message);
         setUser(null);
-        localStorage.removeItem("user");
+        // localStorage.removeItem("user");
         setToken(null);
         navigate("/");
       });
