@@ -11,6 +11,7 @@ export interface GameData {
   my_bet: number;
   table_bet: number;
   my_chips: number;
+  my_wallet: bigint;
   phase: string;
 }
 

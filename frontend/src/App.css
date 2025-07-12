@@ -16,7 +16,6 @@
   transition: background 0.5s ease-in-out;
 }
 
-/* Optional: floating heart animation */
 @keyframes hearts-float {
   0% {
     background-position: 0 0;

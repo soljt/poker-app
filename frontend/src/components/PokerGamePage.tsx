@@ -1,7 +1,6 @@
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { PokerGameProps } from "../types";
-import { useAuth } from "../context/useAuth";
 import PlayingCard from "./PlayingCard";
 
 const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
@@ -15,9 +14,9 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
     big_blind_player,
     player_to_act,
     my_chips,
+    my_wallet,
     phase,
   } = gameData;
-  const { user } = useAuth();
 
   return (
     <div className="container my-4" style={{ paddingBottom: "150px" }}>
@@ -32,7 +31,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
                 Small Blind: {blinds[0]} | Big Blind: {blinds[1]}
               </p>
               <p>My Chips (at the table): {my_chips}</p>
-              <p>Wallet: {user?.chips}</p>
+              <p>Wallet: {my_wallet}</p>
             </div>
           </div>
         </div>

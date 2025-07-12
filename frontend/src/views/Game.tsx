@@ -208,7 +208,11 @@ const Game = () => {
           confirmText="Yes"
         />
       </Container>
-      {gameData && <PokerGamePage gameData={gameData} />}
+      {gameData && (
+        <PokerGamePage
+          gameData={{ ...gameData, my_wallet: user?.chips || 0n }}
+        />
+      )}
       {user && gameData && showRoundOver ? (
         <RoundOverOverlay
           show={showRoundOver}

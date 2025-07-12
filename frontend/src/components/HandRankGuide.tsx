@@ -6,7 +6,7 @@ import { pokerHands } from "../constants/pokerHands";
 
 const HandRankGuide: React.FC = () => {
   return (
-    <Container className="py-5">
+    <Container>
       <section className="mb-5">
         <h1 className="display-3 mb-3">Hand Rankings</h1>
         <p className="lead fs-4">

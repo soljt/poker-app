@@ -83,7 +83,7 @@ const BettingRoundGuide: React.FC = () => {
           </Col>
         </Row>
       </Container>
-      <Container className="py-5">
+      <Container className="mt-5">
         <p className="lead text-start mb-4 fs-4">
           Poker has four <strong>betting rounds</strong>. Below is a short
           summary of each:

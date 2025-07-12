@@ -76,31 +76,6 @@ const WinningGuide: React.FC = () => {
           </Col>
         </Row>
       </Container>
-
-      <Container className="mb-5">
-        <h2 className="h3 text-start mb-3">Tips from ChatGPT 💡</h2>
-        <p className="lead text-start mb-4 fs-4">
-          I didn't even ask him to overuse the em dashes...he did that on his
-          own.
-        </p>
-        <Row className="g-4">
-          {[
-            "Don't bluff just for fun — pick your spots and watch opponents' tendencies.",
-            "Position is power. Acting last gives you the most info and flexibility.",
-            "Folding is not weakness. Most hands should be folded!",
-            "Watch for betting patterns — they tell you more than the cards.",
-            "Big pots usually mean big hands... or big bluffs.",
-          ].map((tip, idx) => (
-            <Col md={6} key={idx}>
-              <Card bg="light" className="h-100 shadow-sm">
-                <Card.Body>
-                  <Card.Text className="fs-5 text-muted">{tip}</Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Container>
     </Container>
   );
 };

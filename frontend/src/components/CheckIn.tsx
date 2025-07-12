@@ -9,7 +9,7 @@ export function CheckIn() {
 
   return (
     <>
-      <div className="d-flex justify-content-center">
+      <div className="d-flex justify-content-center mb-3">
         <button
           className="btn btn-lg btn-primary btn-block"
           onClick={handleClickCheckIn}
