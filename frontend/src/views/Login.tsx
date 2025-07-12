@@ -85,12 +85,12 @@ export default function Login() {
       <div className="float-end">
         <button
           type="button"
-          className="btn btn-outline-light btn-sm"
+          className="btn btn-outline-primary btn-sm"
           onClick={() => {
             navigate("/register");
           }}
         >
-          Or click this really small button
+          Or click this really small button to register
         </button>
       </div>
     </div>

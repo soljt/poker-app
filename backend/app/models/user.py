@@ -14,7 +14,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.Text)
     chips = db.Column(db.Integer, default=1000)
-    role = db.Column(db.Enum(RoleEnum), default=RoleEnum.player)
+    role = db.Column(db.Enum(RoleEnum), default=RoleEnum.host)
 
     def __init__(self, username, chips, password, role=RoleEnum.player):
         self.username = username
