@@ -37,7 +37,10 @@ def update_user(user_id):
     user = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none()
     if not user:
         abort(404)
-
+    if data.get("role") == RoleEnum.admin.value: # cannot promote to admin!
+        abort(401)
+    if "role" in data and user.role == RoleEnum.admin: # cannot demote from admin!
+        abort(401) 
     if "chips" in data:
         user.chips = data["chips"]
     if "role" in data:
@@ -53,6 +56,8 @@ def delete_user(user_id):
     user = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none()
     if not user:
         abort(404)
+    if user.role == RoleEnum.admin: # cannot delete admin!
+        abort(401)
     db.session.delete(user)
     db.session.commit()
     return '', 204
@@ -62,6 +67,8 @@ def delete_user(user_id):
 @admin_required
 def create_user():
     data = request.json
+    if data.get("role") == RoleEnum.admin.value: # cannot create admin!
+        abort(401)
     new_usr = User(data["username"], data["chips"], data["password"]) 
     try:
         db.session.add(new_usr)

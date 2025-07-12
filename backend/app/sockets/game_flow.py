@@ -43,7 +43,7 @@ def emit_revealed_hands(game_id: str, pot_award_info: dict):
 
 def cleanup_leavers(game_id: str):
     if state.get_host(game_id) in state.get_leaver_queue(game_id):
-        socketio.emit("message", "Game host went bankrupt - assigning new host.", to=game_id)
+        socketio.emit("message", "Game host removed - assigning new host.", to=game_id)
         print(state.get_players(game_id))
         print(state.get_leaver_queue(game_id))
         eligible_players = set(state.get_players(game_id)).difference(set(state.get_leaver_queue(game_id)))
@@ -172,6 +172,7 @@ def start_next_round_after_delay(app, game_id, delay=10):
 
         if game.get_player_count() < 2:
             with app.app_context():
+                socketio.emit("error", {"message": "Too few players to continue."})
                 delete_game(game_id)
             return
         
