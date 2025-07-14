@@ -19,7 +19,7 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
   } = gameData;
 
   return (
-    <div className="container my-4" style={{ paddingBottom: "150px" }}>
+    <div className="container my-4">
       <h2 className="text-center mb-4">Poker Game{phase && `: ${phase}`}</h2>
 
       <div className="row mb-4">
@@ -89,13 +89,16 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
           <div className="card text-bg-light mb-3">
             <div className="card-header">Board</div>
             <div className="card-body d-flex gap-2">
-              {board.length > 0 ? (
-                board.map((card, index) => (
-                  <PlayingCard key={index} card={card} />
-                ))
-              ) : (
-                <span className="text-muted">No cards on board yet</span>
-              )}
+              {Array.from({ length: 5 }).map((_, index) => {
+                const card = board[index];
+                return (
+                  <PlayingCard
+                    key={index}
+                    card={card}
+                    faceDown={card === undefined}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>

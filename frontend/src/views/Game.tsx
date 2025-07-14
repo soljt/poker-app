@@ -171,7 +171,7 @@ const Game = () => {
   };
 
   return (
-    <>
+    <div style={{ paddingBottom: "300px" }}>
       <Container className="mt-4">
         <Row className="align-items-center justify-content-between">
           <Col xs="auto">
@@ -224,6 +224,7 @@ const Game = () => {
           currentUser={user.username}
           onShowOwnHand={handleShowOwnHand}
           gamePlayers={gameData.players}
+          fixedPosition={true}
         />
       ) : (
         user?.username === playerToAct &&
@@ -253,6 +254,9 @@ const Game = () => {
                 amount ?? null
               );
             }}
+            fixedPosition={true}
+            tableCurrentBet={gameData.table_bet}
+            playerCurrentBet={gameData.my_bet}
           />
         )
       )}
@@ -261,7 +265,7 @@ const Game = () => {
           {errorMessage}
         </h4>
       </div>
-    </>
+    </div>
   );
 };
 

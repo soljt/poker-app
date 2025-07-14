@@ -1,7 +1,7 @@
 import { Container } from "react-bootstrap";
 import { gameData, mockPotAwards } from "../constants/sampleGameData";
-import DummyRoundOverOverlay from "../dummyComponents/DummyRoundOverOverlay";
 import { useState } from "react";
+import RoundOverOverlay from "./NewRoundOverOverlay";
 
 const RoundOverGuide = () => {
   const [revealedHands, setRevealedHands] = useState<Record<string, string[]>>(
@@ -22,7 +22,7 @@ const RoundOverGuide = () => {
       </p>
 
       <Container className="align-center py-2 mb-3" style={{ maxWidth: 500 }}>
-        <DummyRoundOverOverlay
+        <RoundOverOverlay
           show={true}
           potAwards={mockPotAwards}
           onClose={() => console.log("Round over modal closed")}
@@ -32,6 +32,7 @@ const RoundOverGuide = () => {
           currentUser="You"
           onShowOwnHand={() => setRevealedHands({ You: gameData.my_cards })}
           gamePlayers={gameData.players}
+          fixedPosition={false}
         />
       </Container>
       <p className="lead fs-4 mb-5">

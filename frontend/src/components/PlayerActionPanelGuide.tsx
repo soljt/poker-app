@@ -1,6 +1,6 @@
 import { Container } from "react-bootstrap";
 import { mockAvailableActions, gameData } from "../constants/sampleGameData";
-import DummyPlayerActionPanel from "../dummyComponents/DummyPlayerActionPanel";
+import PlayerActionPanel from "./PlayerActionPanel";
 
 const PlayerActionPanelGuide = () => {
   return (
@@ -16,7 +16,7 @@ const PlayerActionPanelGuide = () => {
       </p>
 
       <Container className="align-center py-2" style={{ maxWidth: 500 }}>
-        <DummyPlayerActionPanel
+        <PlayerActionPanel
           small_blind={gameData.blinds[0]}
           pot={gameData.pots.reduce((sum, entry) => sum + entry.amount, 0)}
           timeToKick={43}
@@ -28,6 +28,9 @@ const PlayerActionPanelGuide = () => {
               amount: amount ?? null,
             });
           }}
+          fixedPosition={false}
+          playerCurrentBet={20}
+          tableCurrentBet={50}
         />
       </Container>
       <p className="lead fs-4 mb-5">

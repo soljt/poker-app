@@ -13,6 +13,7 @@ type RoundOverOverlayProps = {
   revealedHands: Record<string, string[]>;
   onShowOwnHand: () => void;
   gamePlayers: GamePlayer[];
+  fixedPosition?: boolean;
 };
 
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
@@ -24,6 +25,7 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   revealedHands,
   onShowOwnHand,
   gamePlayers,
+  fixedPosition,
 }) => {
   if (!show) return null;
 
@@ -31,7 +33,9 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
 
   return (
     <div
-      className="position-fixed top-0 start-50 translate-middle-x bg-white shadow p-3 rounded"
+      className={`${
+        fixedPosition ? "position-fixed top-0 start-50 translate-middle-x" : ""
+      } bg-white shadow p-3 rounded`}
       style={{
         marginTop: "1rem",
         zIndex: 1050,
@@ -45,14 +49,17 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
       {/* Board Cards */}
       <div className="text-center mb-3">
         <strong>Board:</strong>
-        <div className="mt-1">
-          {board.length > 0
-            ? board.map((card, index) => (
-                <PlayingCard key={index} card={card} />
-              ))
-            : Array.from({ length: 5 }).map((_, index) => (
-                <PlayingCard key={index} faceDown={true} />
-              ))}
+        <div className="mt-1 d-flex justify-content-center gap-2">
+          {Array.from({ length: 5 }).map((_, index) => {
+            const card = board[index];
+            return (
+              <PlayingCard
+                key={index}
+                card={card}
+                faceDown={card === undefined}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -97,7 +104,7 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
             className="d-flex justify-content-between align-items-center border-bottom py-1"
           >
             <span>{player.username}</span>
-            <span>
+            <div className="mt-1 d-flex justify-content-center gap-2">
               {revealedHands[player.username]
                 ? revealedHands[player.username].map((card, i) => (
                     <PlayingCard key={i} card={card} />
@@ -106,7 +113,7 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
                     <PlayingCard key="1" faceDown />,
                     <PlayingCard key="2" faceDown />,
                   ]}
-            </span>
+            </div>
           </div>
         ))}
       </div>
