@@ -153,8 +153,9 @@ def handle_end_of_round(game_id):
 
     # set status and await next round
     state.set_game_status(game_id, StatusEnum.between_hands.value)
-    emit_countdown(game_id, 10, "round_countdown")
-    start_next_round_after_delay(current_app._get_current_object(), game_id)
+    delay = 20 if len(state.get_game(game_id).board) == 5 else 10 # more time for games that go to showdown
+    emit_countdown(game_id, delay, "round_countdown")
+    start_next_round_after_delay(current_app._get_current_object(), game_id, delay=delay)
 
 def emit_countdown(game_id, seconds, event_name):
     def countdown():
