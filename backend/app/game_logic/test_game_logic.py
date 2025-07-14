@@ -268,6 +268,43 @@ class TestDetermineShowers(unittest.TestCase):
         pot_award_info = round.pot.award_pot(ranked_active_players)
         self.assertEqual(set([entry["username"] for entry in round.determine_must_show_players(pot_award_info)]), set(["sol", "kenna"]))
 
+    def test_allin_player_loss(self):
+        p1 = Player("soljt", 19000)
+        p2 = Player("kenna", 500)
+        round = PokerRound([p1, p2], 10, 20)
+
+        # start game
+        round.start_round()
+        player = round.table.btn
+        player.hole_cards = [Card("J", "clubs"), Card("6", "diamonds")]
+        player = player.left
+        player.hole_cards = [Card("K", "clubs"), Card("Q", "diamonds")]
+        print(round.get_player_to_act_and_actions())
+
+
+        # loop here
+        actions_sequence = [{"username": "soljt", "action": "raise", "amount": 200}, 
+         {"username": "kenna", "action": "call", "amount": None},
+         {"username": "kenna", "action": "bet", "amount": 300},
+         {"username": "soljt", "action": "call", "amount": None}]
+        i=0
+        while not round.is_action_finished:
+            action = actions_sequence[i]
+            round.handle_player_action(action["username"], action["action"], action["amount"])
+            round.get_player_to_act_and_actions()
+            i+=1
+        round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
+        
+        # get players to update their best hands
+        player = round.table.btn
+        for _ in range(round.table.num_seats):
+            player.determine_best_hand(round.board)
+            player = player.left
+        
+        pot_award_info = round.end_poker_round()
+        must_show = round.determine_must_show_players(pot_award_info)
+        self.assertEqual(set([entry["username"] for entry in must_show]), set(["soljt"]))
+
 class TestShowWinningHand(unittest.TestCase):
     def test_side_pot(self):
         p1 = Player("P1", 19000)
@@ -317,6 +354,60 @@ class TestBugs(unittest.TestCase):
 
 
         self.assertTrue(game.is_poker_round_over)
+
+    def test_bb_all_in_action_not_finished_bug(self): # had to update round.allin_players after taking blinds
+        p1 = Player("soljt", 1000)
+        p2 = Player("kenna", 20)
+        round = PokerRound([p1, p2], 10, 20)
+
+        # start game
+        round.start_round()
+        player = round.table.btn
+        player.hole_cards = [Card("J", "clubs"), Card("6", "diamonds")]
+        player = player.left
+        player.hole_cards = [Card("K", "clubs"), Card("Q", "diamonds")]
+        print(round.get_player_to_act_and_actions())
+
+
+        # loop here
+        actions_sequence = [{"username": "soljt", "action": "call", "amount": None}, 
+         {"username": "soljt", "action": "check", "amount": None},
+         {"username": "soljt", "action": "check", "amount": None},
+         {"username": "soljt", "action": "check", "amount": None}]
+        i=0
+        while not round.is_action_finished:
+            action = actions_sequence[i]
+            round.handle_player_action(action["username"], action["action"], action["amount"])
+            if not round.is_action_finished:
+                round.get_player_to_act_and_actions()
+                i+=1
+        # round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
+        pot_award_info = round.end_poker_round()
+        self.assertEqual(i, 0)
+
+    def test_allin_player_last_to_act(self): # had to skip allin players when assigning last_to_act after a bet/raise/reraise
+        p1 = Player("brian", 1000)
+        p2 = Player("kenna", 10)
+        p3 = Player("soljt", 500)
+        round = PokerRound([p1, p2, p3], 10, 20)
+
+        # start game
+        round.start_round()
+        print(round.get_player_to_act_and_actions())
+
+        # loop here
+        actions_sequence = [{"username": "brian", "action": "call", "amount": None}, 
+         {"username": "soljt", "action": "reraise", "amount": 50},
+         {"username": "brian", "action": "call", "amount": None}]
+        i=0
+        while i < len(actions_sequence):
+            action = actions_sequence[i]
+            round.handle_player_action(action["username"], action["action"], action["amount"])
+            round.get_player_to_act_and_actions()
+            if not round.is_action_finished:
+                i+=1
+        # round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
+        self.assertEqual(round.phase, "flop")
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,13 +2,15 @@ import itertools
 import random
 import sys
 from types import NoneType
-import unittest
 from typing import List, Tuple, Union
 
 if __name__ == "__main__":
     from exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError, TooManyPlayersError
 else:
-    from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError, TooManyPlayersError
+    try:
+        from app.game_logic.exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError, TooManyPlayersError
+    except ModuleNotFoundError:
+        from exceptions import InvalidActionError, InvalidAmountError, NotPlayersTurnError, TooManyPlayersError
 
 
 class Card:
@@ -377,8 +379,13 @@ class Pot:
             print(f"{player} gets {share}")
         print(f"-------------------------")
         pot_players = set([player for player in self.player_contributions])
-        hand_rank = Hand.HAND_RANKS[winners[0].best_hand.hand_rank] if len(pot_players.intersection(active_players)) != 1 else "By Default"
-        return {"winners": [winner.name for winner in winners], "amount": amount, "share": share, "hand_rank": hand_rank}
+        must_show = len(pot_players.intersection(active_players)) != 1
+        hand_rank = Hand.HAND_RANKS[winners[0].best_hand.hand_rank] if must_show else "By Default"
+        return {"winners": [winner.name for winner in winners], 
+                "amount": amount, 
+                "share": share, 
+                "hand_rank": hand_rank, 
+                "must_show": must_show}
     
     def refund_pot(self) -> None:
         if self.amount == 0: # pot has already been awarded or refunded
@@ -624,9 +631,13 @@ class PokerRound:
         # extract the blinds
         self.pot.add_contribution(self.table.sb, self.table.sb.bet(self.sb_amount)) # may be less than the SB amount
         print(f"{self.table.sb.name} is the SB, betting {self.table.sb.current_bet}")
+        if self.table.sb.allin:
+            self.allin_players.add(self.table.sb)
 
         self.pot.add_contribution(self.table.bb, self.table.bb.bet(self.bb_amount)) # may be less than the BB amount
         print(f"{self.table.bb.name} is the BB, betting {self.table.bb.current_bet}")
+        if self.table.bb.allin:
+            self.allin_players.add(self.table.bb)
 
         # set the current bet (may be less than BB amount)
         self.current_bet = max(self.table.sb.current_bet, self.table.bb.current_bet)
@@ -670,7 +681,7 @@ class PokerRound:
             # in case player cannot raise the amount they specified (goes allin)
             self.current_bet = max(player.current_bet, self.current_bet) 
             self.last_to_act = player.right # used to determine when to stop looping (when everyone has called the bet)
-            while self.last_to_act.folded == True:
+            while self.last_to_act.folded == True or self.last_to_act.allin:
                 self.last_to_act = self.last_to_act.right
         
             # if final_round:
@@ -768,15 +779,9 @@ class PokerRound:
     
     def determine_must_show_players(self, pot_award_info):
         must_show_players = set()
-        for i, pot in enumerate(pot_award_info):
-            # if there's more than one winner, they all have to show
-            if len(pot["winners"]) > 1:
-                must_show_players = must_show_players.union(set([name for name in pot["winners"]]))
-                continue
-            # if there is a next (overflow) pot, the winner of this pot must show to claim it
-            # or if you didn't win by default (getting folded to)
-            if i+1 < len(pot_award_info) or len(self.active_players) - len(self.allin_players) != 1 and len(self.active_players) != 1:
-                must_show_players.add(pot["winners"][0])
+        for pot in pot_award_info:
+            if pot["must_show"]:
+                must_show_players.update(pot["winners"])
         
         return [{"username": name, "hand": [str(card) for card in self.get_player(name).hole_cards]} for name in must_show_players]
 
@@ -1104,9 +1109,14 @@ Type the letter(s) corresponding to your choice: """)
         self.rank_active_players()
 
 if __name__ == "__main__":
-    game = PokerRound([Player("kenna", 400), Player("hotbrian", 980), Player("soljt", 1620)], 10, 20)
+    p1 = Player("brian", 1000)
+    p2 = Player("kenna", 10)
+    p3 = Player("soljt", 500)
+    game = PokerRound([p1, p2, p3], 10, 20)
 
-    actions = ["call", "call", "reraise 450", "call", "call"]
+
+
+    actions = ["call", "reraise 50", "call"]
     game.start_round()
     i = 0
     while not game.is_action_finished:
@@ -1114,6 +1124,7 @@ if __name__ == "__main__":
         if i < len(actions):
             data = game.get_player_to_act_and_actions()
             player = data["player_to_act"]
+            print(data["available_actions"])
             response = actions[i].split(" ")
             if len(response) < 2:
                 game.handle_player_action(player, response[0], None)
@@ -1131,10 +1142,17 @@ if __name__ == "__main__":
         else:
             game.handle_player_action(player, response[0], int(response[1]))
 
-        # for username in game.get_players():
-        #     json_data = game.serialize_for_player(username)
-        #     print(json_data)
-
+    # game.board = [Card("J", "hearts"), Card("J", "diamonds"), Card("5", "hearts"), Card("Q", "clubs"), Card("5", "diamonds")]
+    # player = game.table.btn
+    # player.hole_cards = [Card("8", "clubs"), Card("2", "hearts")]
+    # player = player.left
+    # player.hole_cards = [Card("J", "clubs"), Card("7", "hearts")]
+    # player = player.left
+    # player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
+    # player = player.left
+    # player.hole_cards = [Card("10", "diamonds"), Card("3", "hearts")]
+    for username in game.get_players():
+        game.get_player(username).determine_best_hand(game.board)
     pot_award_info = game.end_poker_round()
     must_show_players = game.determine_must_show_players(pot_award_info)
     print(pot_award_info)
