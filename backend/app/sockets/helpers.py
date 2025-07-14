@@ -22,10 +22,13 @@ def cashout_all_players(game_id: str) -> None:
 
 def cashout_player(game: PokerRound, username: str) -> None:
     player = game.get_player(username)
-    stack = player.chips
-    print(f"cashing out {username}, with {stack} chips")
-    update_player_chips(username, get_user_bankroll(username) + stack)
-    player.chips = 0
+    if player:
+        stack = player.chips
+        print(f"cashing out {username}, with {stack} chips")
+        update_player_chips(username, get_user_bankroll(username) + stack)
+        player.chips = 0
+    else:
+        print(f"No player object found for player with username {username}")
 
 def get_user_bankroll(username: str) -> int:
     user = db.session.execute(db.select(User).filter_by(username=username)).scalar_one_or_none()
