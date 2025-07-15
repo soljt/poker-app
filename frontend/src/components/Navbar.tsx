@@ -88,6 +88,13 @@ function NavbarComponent() {
                 Admin
               </Nav.Link>
             )}
+            <Nav.Link
+              onClick={() => {
+                navigate("/leaderboard");
+              }}
+            >
+              Leaderboard
+            </Nav.Link>
             {isLoggedIn() ? (
               <Nav.Link onClick={logout}>Logout</Nav.Link>
             ) : (
