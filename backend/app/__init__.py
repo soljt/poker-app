@@ -6,7 +6,7 @@ if os.getenv("FLASK_ENV") == "production":
     import eventlet
     eventlet.monkey_patch()
 
-from .extensions import jwt, socketio
+from .extensions import jwt, socketio, limiter, cache
 from app.db import init_db
 from config import Config
 from app.models.user import User
@@ -32,6 +32,9 @@ def create_app(config_class=Config, testing=False):
     jwt.init_app(app)
     # sockets (game state)
     socketio.init_app(app)
+    # rate-limiting (leaderboard)
+    limiter.init_app(app)
+    cache.init_app(app)
 
     # import and register jwt handlers
     from app.auth import jwt_handlers
@@ -46,10 +49,12 @@ def create_app(config_class=Config, testing=False):
     from app.util import util as util_bp
     from app.game import game as game_bp
     from app.admin import admin as admin_bp
+    from app.leaderboard import leaderboard as leaderboard_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(util_bp)
     app.register_blueprint(game_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(leaderboard_bp)
 
     return app

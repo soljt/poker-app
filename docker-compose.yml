@@ -11,6 +11,8 @@ services:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CACHE_REDIS_HOST=redis
+      - CACHE_REDIS_PORT=6379
     volumes:
       - ./backend:/app
 
@@ -38,6 +40,12 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: always
 
 volumes:
   pgdata:

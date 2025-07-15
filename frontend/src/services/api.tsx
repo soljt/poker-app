@@ -27,8 +27,13 @@ export const admin_api = axios.create({
   withCredentials: true,
 });
 
+export const leaderboard_api = axios.create({
+  baseURL: baseURL + "/leaderboard", //"http://localhost:5000/admin"
+  withCredentials: true,
+});
+
 // Set interceptors to always inject fresh CSRF token
-[api, auth_api, game_api, admin_api].forEach((api) => {
+[api, auth_api, game_api, admin_api, leaderboard_api].forEach((api) => {
   api.interceptors.request.use((config) => {
     const token = getCookie("csrf_access_token");
     if (token) {

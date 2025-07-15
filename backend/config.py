@@ -20,3 +20,7 @@ class Config:
     JWT_CSRF_IN_COOKIES = True # send the csrf token via cookie so that the frontend can grab from browser
     JWT_TOKEN_LOCATION = ["cookies"] # allows jwt in http-only cookie (protect against XSS attack)
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    CACHE_REDIS_HOST = os.getenv("CACHE_REDIS_HOST", "localhost")
+    CACHE_REDIS_PORT = int(os.getenv("CACHE_REDIS_PORT", 6379))
+    CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_TYPE = "RedisCache"

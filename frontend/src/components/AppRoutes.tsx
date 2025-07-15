@@ -11,6 +11,7 @@ import AdminRoute from "../routes/AdminRoute.tsx";
 import { Routes, Route } from "react-router-dom";
 import SpecialLanding from "./SpecialLanding.tsx";
 import { useAuth } from "../context/useAuth.tsx";
+import Leaderboard from "../views/Leaderboard.tsx";
 
 export default function AppRoutes() {
   const { user } = useAuth();
@@ -56,6 +57,7 @@ export default function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route path="/leaderboard" element={<Leaderboard />} />
     </Routes>
   );
 }
