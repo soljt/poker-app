@@ -6,7 +6,7 @@ from app.extensions import limiter, cache
 from app.leaderboard import leaderboard
 
 @leaderboard.route("/")
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 @cache.cached(timeout=10)
 def fetch_leaderboard():
     balance = case(

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { leaderboard_api } from "../services/api";
 import { Col, Container, Row } from "react-bootstrap";
 import LeaderboardRow from "../components/LeaderboardRow";
+import { toast } from "react-toastify";
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<{ username: string; balance: number }[]>(
@@ -9,10 +10,19 @@ export default function Leaderboard() {
   );
 
   const fetchUsers = useCallback(() => {
-    leaderboard_api.get("/").then((res) => {
-      const data = res.data;
-      setUsers(data.users);
-    });
+    leaderboard_api
+      .get("/")
+      .then((res) => {
+        const data = res.data;
+        setUsers(data.users);
+      })
+      .catch((err) => {
+        if (err.response.status == 429) {
+          toast.error(
+            "I rate limited the leaderboard API to avoid database traffic...just wait a minute, then refresh."
+          );
+        }
+      });
   }, []);
 
   useEffect(() => {
