@@ -4,6 +4,7 @@ services:
     container_name: poker-backend
     depends_on:
       - db
+      - redis
     environment:
       - DATABASE_URL=postgresql://pokeruser:pokerpass@db:5432/pokerdb
       - FLASK_ENV=production
@@ -41,8 +42,7 @@ services:
   redis:
     image: redis:alpine
     container_name: poker-redis
-    ports: 
-      - "6379:6379"  # No port exposure
+    ports: []  # No port exposure
     restart: always
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
