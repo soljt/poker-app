@@ -11,6 +11,6 @@ if os.getenv("FLASK_ENV") == "production":
 else:
     socketio = SocketIO(cors_allowed_origins="*")
 
-REDIS_PASSWORD = os.getenv("CACHE_REDIS_PASSWORD", "")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 limiter = Limiter(key_func=get_remote_address, storage_uri=f"redis://:{REDIS_PASSWORD}@{os.getenv('CACHE_REDIS_HOST', 'localhost')}:{os.getenv('CACHE_REDIS_PORT', '6379')}")
 cache = Cache()
