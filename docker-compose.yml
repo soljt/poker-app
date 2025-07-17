@@ -41,7 +41,8 @@ services:
   redis:
     image: redis:alpine
     container_name: poker-redis
-    ports: "6379:6379"  # No port exposure
+    ports: 
+      - "6379:6379"  # No port exposure
     restart: always
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
