@@ -22,5 +22,6 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     CACHE_REDIS_HOST = os.getenv("CACHE_REDIS_HOST", "localhost")
     CACHE_REDIS_PORT = int(os.getenv("CACHE_REDIS_PORT", 6379))
+    CACHE_REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
     CACHE_DEFAULT_TIMEOUT = 300
     CACHE_TYPE = "RedisCache"

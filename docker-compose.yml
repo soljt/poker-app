@@ -2,8 +2,6 @@ services:
   backend:
     build: ./backend
     container_name: poker-backend
-    ports:
-      - "5000:5000"
     depends_on:
       - db
     environment:
@@ -38,14 +36,15 @@ services:
       POSTGRES_DB: pokerdb
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
 
   redis:
     image: redis:alpine
-    ports:
-      - "6379:6379"
+    container_name: poker-redis
+    ports: []  # No port exposure
     restart: always
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
 
 volumes:
   pgdata:
