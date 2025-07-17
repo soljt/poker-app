@@ -36,7 +36,7 @@ services:
       POSTGRES_PASSWORD: pokerpass
       POSTGRES_DB: pokerdb
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:alpine
