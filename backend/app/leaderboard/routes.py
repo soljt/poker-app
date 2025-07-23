@@ -18,4 +18,5 @@ def fetch_leaderboard():
               "balance": row[1]} for row in rows]
     return jsonify({
         "users": users,
+        "ip": request.remote_addr
     })
