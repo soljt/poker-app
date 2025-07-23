@@ -20,8 +20,8 @@ services:
     build: ./frontend
     container_name: poker-frontend
     ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
+      - "80:80"
+      - "443:443"
     depends_on:
       - backend
     volumes: # PRODUCTION ONLY
