@@ -15,7 +15,7 @@ export default function Leaderboard() {
       .then((res) => {
         const data = res.data;
         setUsers(data.users);
-        console.log(data.ip);
+        toast.success("your ip" + data.ip);
       })
       .catch((err) => {
         if (err.response.status == 429) {
