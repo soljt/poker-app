@@ -10,10 +10,13 @@ from .extensions import jwt, socketio, limiter, cache
 from app.db import init_db
 from config import Config
 from app.models.user import User
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 def create_app(config_class=Config, testing=False):
     app = Flask(__name__)
+    # trust 1 proxy layer (NGINX) 
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_host=1)
     app.config.from_object(config_class)
 
     if testing:
