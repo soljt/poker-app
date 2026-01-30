@@ -66,3 +66,6 @@ volumes:
 networks:
   web:
     external: true
+  
+  backend_net:
+    driver: bridge
