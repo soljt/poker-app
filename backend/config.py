@@ -24,4 +24,4 @@ class Config:
     CACHE_REDIS_PORT = int(os.getenv("CACHE_REDIS_PORT", 6379))
     CACHE_REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
     CACHE_DEFAULT_TIMEOUT = 300
-    CACHE_TYPE = "RedisCache"
+    CACHE_TYPE = "RedisCache" if os.getenv("FLASK_ENV") == "production" else "SimpleCache"

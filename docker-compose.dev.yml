@@ -1,0 +1,56 @@
+services:
+  backend:
+    build: ./backend
+    container_name: poker-backend-dev
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://pokeruser:pokerpass@db:5432/pokerdb
+      - FLASK_ENV=development
+      - SECRET_KEY=dev-secret
+      - JWT_SECRET_KEY=dev-jwt
+      - CACHE_REDIS_HOST=redis
+      - CACHE_REDIS_PORT=6379
+      - REDIS_PASSWORD=
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5000:5000"
+    networks:
+      - dev_net
+    command: ["python", "run.py"]
+
+  frontend:
+    build: ./frontend
+    container_name: poker-frontend-dev
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/nginx.dev.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - dev_net
+
+  db:
+    image: postgres
+    container_name: poker-postgres-dev
+    environment:
+      POSTGRES_USER: pokeruser
+      POSTGRES_PASSWORD: pokerpass
+      POSTGRES_DB: pokerdb
+    volumes:
+      - ./postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - dev_net
+
+  redis:
+    image: redis:alpine
+    container_name: poker-redis-dev
+    networks:
+      - dev_net
+
+networks:
+  dev_net:
+    driver: bridge
