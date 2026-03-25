@@ -16,9 +16,10 @@ def set_new_game_id(game_id: str, username:str, small_blind: int, big_blind: int
         "small_blind": small_blind,
         "big_blind": big_blind,
         "buy_in": buy_in,
-        "status": StatusEnum.waiting_to_start.value, 
+        "status": StatusEnum.waiting_to_start.value,
         "joiner_queue": [],
-        "leaver_queue": []}
+        "leaver_queue": [],
+        "rebuy_queue": []}
 
 def get_game(game_id: str) -> PokerRound | None:
     return games.get(game_id, {}).get("game")
@@ -57,6 +58,22 @@ def append_to_leaver_queue(game_id: str, username: str):
 
 def remove_from_leaver_queue(game_id: str, username: str):
     arr = games.get(game_id, {}).get("leaver_queue", [])
+    if username in arr:
+        arr.remove(username)
+
+# rebuy queue
+def get_rebuy_queue(game_id: str) -> list[str]:
+    return games.get(game_id, {}).get("rebuy_queue", [])
+
+def append_to_rebuy_queue(game_id: str, username: str):
+    q = games.get(game_id, {}).get("rebuy_queue")
+    if q is None:
+        games[game_id]["rebuy_queue"] = [username]
+    elif username not in q:
+        q.append(username)
+
+def remove_from_rebuy_queue(game_id: str, username: str):
+    arr = games.get(game_id, {}).get("rebuy_queue", [])
     if username in arr:
         arr.remove(username)
 

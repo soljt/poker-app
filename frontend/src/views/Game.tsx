@@ -28,6 +28,7 @@ const Game = () => {
   const [revealedHands, setRevealedHands] = useState<Record<string, string[]>>(
     {}
   );
+  const [rebuyInfo, setRebuyInfo] = useState<{ buy_in: number } | null>(null);
   const { user } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
@@ -145,6 +146,15 @@ const Game = () => {
 
     socket.on("game_started", () => {
       setRevealedHands({});
+      setRebuyInfo(null);
+    });
+
+    socket.on("rebuy_available", (data: { buy_in: number }) => {
+      setRebuyInfo(data);
+    });
+
+    socket.on("rebuy_confirmed", () => {
+      setRebuyInfo(null);
     });
 
     socket.on("player_kicked", () => {
@@ -163,11 +173,17 @@ const Game = () => {
       socket.off("game_started");
       socket.off("player_kicked");
       socket.off("player_removed");
+      socket.off("rebuy_available");
+      socket.off("rebuy_confirmed");
     };
   }, [socket, navigate]);
 
   const handleShowOwnHand = () => {
     socket.emit("reveal_hand"); // backend can resolve identity via session/auth
+  };
+
+  const handleRebuy = () => {
+    socket.emit("rebuy");
   };
 
   return (
@@ -225,6 +241,8 @@ const Game = () => {
           onShowOwnHand={handleShowOwnHand}
           gamePlayers={gameData.players}
           fixedPosition={true}
+          rebuyInfo={rebuyInfo}
+          onRebuy={handleRebuy}
         />
       ) : (
         user?.username === playerToAct &&
