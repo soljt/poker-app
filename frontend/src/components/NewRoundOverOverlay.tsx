@@ -14,6 +14,8 @@ type RoundOverOverlayProps = {
   onShowOwnHand: () => void;
   gamePlayers: GamePlayer[];
   fixedPosition?: boolean;
+  rebuyInfo?: { buy_in: number } | null;
+  onRebuy?: () => void;
 };
 
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
@@ -26,6 +28,8 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   onShowOwnHand,
   gamePlayers,
   fixedPosition,
+  rebuyInfo,
+  onRebuy,
 }) => {
   if (!show) return null;
 
@@ -128,6 +132,18 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
             className="mb-2"
           >
             Show My Hand
+          </Button>
+        </div>
+      )}
+
+      {/* Rebuy Button */}
+      {rebuyInfo && onRebuy && (
+        <div className="text-center mb-2">
+          <p className="text-danger mb-1">
+            <strong>You're out of chips!</strong>
+          </p>
+          <Button variant="success" size="sm" onClick={onRebuy}>
+            Rebuy ({rebuyInfo.buy_in} chips)
           </Button>
         </div>
       )}
