@@ -6,23 +6,24 @@ const HostGameManager = ({
 }: {
   handleCreateGame: (gameParams: GameParams) => void;
 }) => {
-  const [gameParams, setGameParams] = useState<GameParams>({
-    small_blind: 10,
-    big_blind: 20,
-    buy_in: 1000,
+  const [gameParams, setGameParams] = useState({
+    small_blind: "10",
+    big_blind: "20",
+    buy_in: "1000",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setGameParams((prev) => ({
-      ...prev,
-      [name]: Number(value),
-    }));
+    setGameParams((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleCreateGame(gameParams);
+    handleCreateGame({
+      small_blind: Number(gameParams.small_blind),
+      big_blind: Number(gameParams.big_blind),
+      buy_in: Number(gameParams.buy_in),
+    });
   };
 
   return (
@@ -46,7 +47,7 @@ const HostGameManager = ({
             id={name}
             name={name}
             step={name === "buy_in" ? 500 : 10}
-            value={gameParams[name as keyof GameParams]}
+            value={gameParams[name as keyof typeof gameParams]}
             onChange={handleChange}
             required
           />
