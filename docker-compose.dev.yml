@@ -1,18 +1,17 @@
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.dev
     container_name: poker-backend-dev
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy   # <-- wait for healthy, not just started
     environment:
       - DATABASE_URL=postgresql://pokeruser:pokerpass@db:5432/pokerdb
       - FLASK_ENV=development
       - SECRET_KEY=dev-secret
       - JWT_SECRET_KEY=dev-jwt
-      - CACHE_REDIS_HOST=redis
-      - CACHE_REDIS_PORT=6379
-      - REDIS_PASSWORD=
     volumes:
       - ./backend:/app
     ports:
@@ -40,14 +39,16 @@ services:
       POSTGRES_USER: pokeruser
       POSTGRES_PASSWORD: pokerpass
       POSTGRES_DB: pokerdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokeruser -d pokerdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 3s   # gives Postgres time before healthchecks begin
+    ports:
+    - "5432:5432"
     volumes:
       - ./postgres_data_dev:/var/lib/postgresql/data
-    networks:
-      - dev_net
-
-  redis:
-    image: redis:alpine
-    container_name: poker-redis-dev
     networks:
       - dev_net
 

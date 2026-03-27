@@ -9,7 +9,8 @@ games = {}
 #     "buy_in": int,
 #     "status": StatusEnum, 
 #     "joiner_queue": [],
-#     "leaver_queue": []} - "game" is not set until game is started by host
+#     "leaver_queue": [],
+#     "rebuy_queue": []} - "game" is not set until game is started by host
 
 connected_users = {} # active_users[socket_sid] = {"username": str, "game_id": str} - user doesn't become "active" unless they get a game_id, otherwise null
 player_timers = {} # {game_id: {username: InactionTimer}}

@@ -131,10 +131,14 @@ def handle_start_game_helper(game_id: str):
 def kick_broke_players(game_id: str):
     game = state.get_game(game_id)
     small_blind_amount = state.get_small_blind(game_id)
+    leaver_queue = state.get_leaver_queue(game_id)
     for username in state.get_players(game_id):
+        if username in leaver_queue:
+            continue  # already leaving voluntarily, no rebuy offer
         if game.get_player(username).chips <= small_blind_amount:
-            socketio.emit("message", "You don't have enough chips to continue. You won't be joining the next hand unless you re-buy-in.", to=username)
-            state.append_to_leaver_queue(game_id, username)
+            state.append_to_rebuy_queue(game_id, username)
+            socketio.emit("rebuy_available", {"buy_in": state.get_buy_in(game_id)}, to=username)
+            socketio.emit("message", "You're out of chips! Rebuy before the next hand starts to keep playing.", to=username)
     
 def handle_end_of_round(game_id):
     pot_award_info = emit_round_over(game_id)
@@ -172,19 +176,26 @@ def start_next_round_after_delay(app, game_id, delay=10):
             print("Tried to start next round, but the game was already deleted!")
             return
 
-        if game.get_player_count() < 2:
-            with app.app_context():
+        with app.app_context():
+            # kick anyone in the rebuy queue who didn't rebuy in time
+            for username in state.get_rebuy_queue(game_id)[:]:
+                state.remove_from_rebuy_queue(game_id, username)
+                if username in state.get_players(game_id):
+                    state.append_to_leaver_queue(game_id, username)
+                    socketio.emit("player_kicked", to=username)
+
+            if not cleanup_leavers(game_id):
+                return  # host left, game deleted
+
+            if game.get_player_count() < 2:
                 socketio.emit("error", {"message": "Too few players to continue."})
                 delete_game(game_id)
-            return
-        
-        state.set_game_status(game_id, StatusEnum.in_progress.value)
-        
-        game.start_next_round()
-        socketio.emit("game_started", {"message": "Game joined successfully"}, to=game_id)
-        
-        emit_updated_game_state(game)
-        with app.app_context():
+                return
+
+            state.set_game_status(game_id, StatusEnum.in_progress.value)
+            game.start_next_round()
+            socketio.emit("game_started", {"message": "Game joined successfully"}, to=game_id)
+            emit_updated_game_state(game)
             emit_player_turn(game_id)
-      
+
     Timer(delay, start_next_round).start()

@@ -66,6 +66,7 @@ def remove_user_from_game(game_id: str, username: str):
     state.set_connected_user(None, username, sid)
 
     state.remove_from_leaver_queue(game_id, username)
+    state.remove_from_rebuy_queue(game_id, username)
     state.remove_from_players(game_id, username)
     socketio.emit("player_left", {"game_id": game_id, "username": username})  # notify all others to update Lobby
 
