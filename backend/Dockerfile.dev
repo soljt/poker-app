@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+# Install security updates and clean up
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install
+# dev requirements doesn't have gunicorn or eventlet - having them ruins websockets...
+COPY requirements.dev.txt .
+RUN pip install --no-cache-dir -r requirements.dev.txt
+
+# Copy the rest of the backend code
+COPY . .
+
+# Ensure Flask runs in dev
+ENV FLASK_APP=app
+ENV FLASK_ENV=dev
+ENV PYTHONUNBUFFERED=1
+
+# Expose the Flask port
+EXPOSE 5000
+
+# Start the app
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
