@@ -12,6 +12,7 @@ export default function UserRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<UserRowData>({ ...user });
+  const [chipsInput, setChipsInput] = useState(String(user.chips));
 
   const handleSave = () => {
     admin_api.put(`users/${user.id}`, formData).then(() => {
@@ -22,6 +23,7 @@ export default function UserRow({
 
   const handleCancel = () => {
     setFormData({ ...user });
+    setChipsInput(String(user.chips));
     setEditing(false);
   };
 
@@ -58,11 +60,12 @@ export default function UserRow({
             {editing ? (
               <Form.Control
                 type="number"
-                value={formData.chips}
+                value={chipsInput}
                 step={100}
-                onChange={(e) =>
-                  setFormData({ ...formData, chips: +e.target.value })
-                }
+                onChange={(e) => {
+                  setChipsInput(e.target.value);
+                  setFormData({ ...formData, chips: e.target.value === "" ? 0 : +e.target.value });
+                }}
               />
             ) : (
               <span>{user.chips}</span>
