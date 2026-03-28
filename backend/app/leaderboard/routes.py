@@ -11,6 +11,7 @@ from app.leaderboard import leaderboard
 def fetch_leaderboard():
     balance = case(
         (User.username == 'kenna', User.chips - 10000),
+        (User.username == 'PokerBot', User.chips - 10000000),
         else_=User.chips - 5000
     )
     rows = db.session.execute(db.select(User.username, balance).order_by(balance.desc()).limit(10))

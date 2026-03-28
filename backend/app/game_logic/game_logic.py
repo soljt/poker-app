@@ -163,6 +163,19 @@ class Hand:
         else:
             return False
     
+def best_hand_from_cards(cards: List[Card]) -> 'Hand':
+    """Return the best 5-card Hand from an arbitrary list of Card objects."""
+    all_cards = sorted(cards)
+    if len(all_cards) < 5:
+        return Hand(all_cards, sorted=True)
+    best = None
+    for combo in itertools.combinations(all_cards, 5):
+        hand = Hand(list(combo), sorted=True)
+        if best is None or hand > best:
+            best = hand
+    return best
+
+
 class Player:
     def __init__(self, name: str, chips: int = 1000):
         self.name = name
@@ -196,19 +209,7 @@ class Player:
         """
         Player determines their own best hand based on the available board and their hole cards
         """
-        all_cards = board + self.hole_cards
-        all_cards.sort()
-    
-        best = None
-        # generate all 5-card combinations
-        if len(all_cards) < 5:
-            self.best_hand = Hand(all_cards, sorted=True)
-            return
-        for combo in itertools.combinations(all_cards, 5):
-            hand = Hand(list(combo), sorted=True)
-            if best is None or hand > best:
-                best = hand
-        self.best_hand = best
+        self.best_hand = best_hand_from_cards(board + self.hole_cards)
 
     def reset(self):
         """

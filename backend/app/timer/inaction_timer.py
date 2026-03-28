@@ -1,5 +1,6 @@
 import threading
 import time
+import os
 
 class InactionTimer:
     def __init__(
@@ -16,7 +17,7 @@ class InactionTimer:
         self.app = app
         self.game_id = game_id
         self.username = username
-        self.delay = delay
+        self.delay = delay if os.getenv("FLASK_ENV") == "production" else 10000
 
         self.get_game_callback = get_game_callback
         self.kick_callback = kick_callback

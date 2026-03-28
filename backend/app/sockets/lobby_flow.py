@@ -137,8 +137,8 @@ def add_bot_to_game(game_id: str) -> None:
         emit("player_queued", {"game_id": game_id, "username": BOT_USERNAME}, broadcast=True)
 
     from app.bot.poker_bot import PokerBot
-    from app.bot.gemini_engine import GeminiDecisionEngine
-    state.add_bot(game_id, BOT_USERNAME, PokerBot(BOT_USERNAME, GeminiDecisionEngine()))
+    from app.bot.heuristic_engine import HeuristicDecisionEngine
+    state.add_bot(game_id, BOT_USERNAME, PokerBot(BOT_USERNAME, HeuristicDecisionEngine()))
 
 def create_game(game_id: str, username: str, small_blind: int, big_blind: int, buy_in: int):
     state.set_connected_user(game_id, username, state.get_user_sid(username)) # TODO remove the username overwrite 
