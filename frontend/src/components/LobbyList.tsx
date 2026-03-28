@@ -10,6 +10,7 @@ type Props = {
   leaveGame: (game_id: string, username: string) => void;
   handleStartGame: () => void;
   reconnectToGame: (game_id: string) => void;
+  handleAddBot: () => void;
 };
 
 const LobbyList: React.FC<Props> = ({
@@ -20,6 +21,7 @@ const LobbyList: React.FC<Props> = ({
   leaveGame,
   handleStartGame,
   reconnectToGame,
+  handleAddBot,
 }) => {
   return (
     <div className="container" style={{ paddingBottom: "150px" }}>
@@ -81,9 +83,21 @@ const LobbyList: React.FC<Props> = ({
 
                   <div className="d-flex gap-2">
                     {user?.username === game.host ? (
-                      <Button variant="success" onClick={handleStartGame}>
-                        Start Game
-                      </Button>
+                      <>
+                        <Button variant="success" onClick={handleStartGame}>
+                          Start Game
+                        </Button>
+                        <Button
+                          variant="outline-secondary"
+                          onClick={handleAddBot}
+                          disabled={
+                            game.players.includes("PokerBot") ||
+                            game.joiner_queue.includes("PokerBot")
+                          }
+                        >
+                          Add Bot
+                        </Button>
+                      </>
                     ) : (
                       !game.players.includes(user?.username || "") &&
                       !game.joiner_queue.includes(user?.username || "") && (

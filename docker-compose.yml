@@ -13,6 +13,7 @@ services:
       - CACHE_REDIS_HOST=redis
       - CACHE_REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - POKER_BOT_PASSWORD=
     volumes:
       - ./backend:/app
     networks:
