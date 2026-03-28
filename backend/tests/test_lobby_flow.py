@@ -61,7 +61,7 @@ class TestValidateCreateGame:
         mocker.patch("app.sockets.lobby_flow.state.check_game_id", return_value=True)
         mock_emit = mocker.patch("app.sockets.lobby_flow.emit")
 
-        result = lobby_flow.validate_create_game("game_bob", "bob", 100)
+        result = lobby_flow.validate_create_game("game_bob", "bob", 100, 1, 2)
 
         assert result == "game_bob"
         mock_emit.assert_called_with("error", {"message": "You have already created a game."})
@@ -72,7 +72,7 @@ class TestValidateCreateGame:
         mocker.patch("app.sockets.lobby_flow.get_user_bankroll", return_value=50)
         mock_emit = mocker.patch("app.sockets.lobby_flow.emit")
 
-        result = lobby_flow.validate_create_game("game_bob", "bob", 100)
+        result = lobby_flow.validate_create_game("game_bob", "bob", 100, 1, 2)
 
         assert result == ""
         mock_emit.assert_called_with("error", {"message": "You don't have enough to buy in to your own game..."})
@@ -81,7 +81,7 @@ class TestValidateCreateGame:
         mocker.patch("app.sockets.lobby_flow.state.check_game_id", return_value=False)
         mocker.patch("app.sockets.lobby_flow.get_user_bankroll", return_value=200)
 
-        result = lobby_flow.validate_create_game("game_bob", "bob", 100)
+        result = lobby_flow.validate_create_game("game_bob", "bob", 100, 1, 2)
 
         assert result is True
 
