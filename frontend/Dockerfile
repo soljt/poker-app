@@ -1,7 +1,4 @@
-FROM node:22-alpine AS build
-
-# Update apk packages to reduce vulnerabilities
-RUN apk update && apk upgrade
+FROM dhi.io/node:25.8-debian13-dev AS build
 
 WORKDIR /app
 COPY . .
@@ -10,7 +7,7 @@ RUN npm install
 RUN npm run build
 
 # Nginx stage
-FROM nginx:alpine
+FROM dhi.io/nginx:1.29-debian12-dev
 
 # Copy the build output to Nginx's public directory
 COPY --from=build /app/dist /usr/share/nginx/html
