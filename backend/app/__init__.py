@@ -31,6 +31,16 @@ def create_app(config_class=Config, testing=False):
     CORS(app, supports_credentials=True, resources={r"/*": {"origins": origin_list}})
     # db - see db.py
     init_db(app)
+
+    # seed bot account
+    with app.app_context():
+        from app.db import db
+        from app.models.user import User, RoleEnum
+        bot_user = db.session.execute(db.select(User).filter_by(username="PokerBot")).scalar_one_or_none()
+        if not bot_user:
+            db.session.add(User(username="PokerBot", chips=10_000_000, password=f"{os.getenv('POKER_BOT_PASSWORD')}", role=RoleEnum.player))
+            db.session.commit()
+
     # jwt (auth)
     jwt.init_app(app)
     # sockets (game state)

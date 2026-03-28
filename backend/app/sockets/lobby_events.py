@@ -3,7 +3,7 @@ from flask_socketio import emit, join_room, leave_room
 from app.extensions import socketio
 from app.sockets.helpers import delete_game, get_user_role
 import app.state as state
-from app.sockets.lobby_flow import create_game, get_game_info, join_game, leave_game, reconnect_to_game, validate_create_game, validate_join_game, validate_leave_game, validate_reconnect_to_game
+from app.sockets.lobby_flow import create_game, get_game_info, join_game, leave_game, reconnect_to_game, validate_create_game, validate_join_game, validate_leave_game, validate_reconnect_to_game, add_bot_to_game
 from app.models.user import RoleEnum
 
 @socketio.on("join_game")
@@ -72,6 +72,15 @@ def handle_delete_game(data):
         return
 
     return delete_game(game_id)
+
+@socketio.on("add_bot")
+def handle_add_bot(data):
+    username, _ = state.get_connected_user(request.sid)
+    game_id = data.get("game_id")
+    if not state.check_game_id(game_id) or state.get_host(game_id) != username:
+        emit("error", {"message": "Only the host can add a bot."})
+        return
+    add_bot_to_game(game_id)
 
 @socketio.on("get_games")
 def handle_get_games():

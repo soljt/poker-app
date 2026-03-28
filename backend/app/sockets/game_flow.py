@@ -12,8 +12,24 @@ from app.recording.game_recorder import recorder
 def emit_player_turn(game_id: str, delay=45):
     game = state.get_game(game_id)
     data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
+    player_to_act = data["player_to_act"]
+
+    if state.is_bot(game_id, player_to_act):
+        app = current_app._get_current_object()
+        Thread(target=handle_bot_turn, args=(app, game_id, player_to_act)).start()
+        return
+
     socketio.emit("player_turn", data, to=game_id)
-    kick_player_after_delay(current_app._get_current_object(), game_id, data["player_to_act"], delay=delay)
+    kick_player_after_delay(current_app._get_current_object(), game_id, player_to_act, delay=delay)
+
+def handle_bot_turn(app, game_id: str, username: str):
+    time.sleep(1)  # brief pause so bot turns don't feel instant
+    with app.app_context():
+        if not state.get_game(game_id) or not state.is_bot(game_id, username):
+            return
+        bot = state.get_bots(game_id)[username]
+        action, amount = bot.get_action(state.get_game(game_id))
+        handle_player_action_helper(username, game_id, action, amount)
 
 def kick_player_after_delay(app, game_id: str, username: str, delay: int=30):
     def kick_player(game_id: str, username: str):
