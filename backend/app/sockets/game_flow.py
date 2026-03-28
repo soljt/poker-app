@@ -14,12 +14,13 @@ def emit_player_turn(game_id: str, delay=45):
     data = game.get_player_to_act_and_actions() # {"player_to_act": Player, "actions": [{"action": , "min": , "allin": }, {}]}
     player_to_act = data["player_to_act"]
 
+    socketio.emit("player_turn", data, to=game_id)
+
     if state.is_bot(game_id, player_to_act):
         app = current_app._get_current_object()
         Thread(target=handle_bot_turn, args=(app, game_id, player_to_act)).start()
         return
 
-    socketio.emit("player_turn", data, to=game_id)
     kick_player_after_delay(current_app._get_current_object(), game_id, player_to_act, delay=delay)
 
 def handle_bot_turn(app, game_id: str, username: str):
