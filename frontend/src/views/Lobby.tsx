@@ -51,6 +51,10 @@ export default function Lobby() {
     socket.emit("start_game", { game_id: localStorage.getItem("game_id") });
   }
 
+  function handleAddBot() {
+    socket.emit("add_bot", { game_id: localStorage.getItem("game_id") });
+  }
+
   function reconnectToGame(game_id: string) {
     socket.emit("reconnect_to_game", { game_id }, (status: boolean) => {
       if (status) {
@@ -192,6 +196,7 @@ export default function Lobby() {
         leaveGame={leaveGame}
         handleStartGame={handleStartGame}
         reconnectToGame={reconnectToGame}
+        handleAddBot={handleAddBot}
       />
     </>
   );

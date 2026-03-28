@@ -50,7 +50,8 @@ def update_player_chips(username, amount):
 def remove_users_from_game(game_id: str) -> None:
     for username in state.get_players(game_id) + state.get_joiner_queue(game_id):
         sid = state.get_user_sid(username)
-        state.set_connected_user(None, username, sid)
+        if sid:
+            state.set_connected_user(None, username, sid)
 
 def cashout_and_remove_player(game_id: str, username: str):
     cashout_player(state.get_game(game_id), username)
@@ -62,13 +63,15 @@ def remove_user_from_game(game_id: str, username: str):
 
     player = game.get_player(username)
     game.remove_player(player)
-            
+
     sid = state.get_user_sid(username)
-    state.set_connected_user(None, username, sid)
+    if sid:
+        state.set_connected_user(None, username, sid)
 
     state.remove_from_leaver_queue(game_id, username)
     state.remove_from_rebuy_queue(game_id, username)
     state.remove_from_players(game_id, username)
+    state.remove_bot(game_id, username)
     socketio.emit("player_left", {"game_id": game_id, "username": username})  # notify all others to update Lobby
 
 def delete_game(game_id: str):
