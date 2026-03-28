@@ -85,15 +85,16 @@ jobs:
             # Log into GHCR on the server
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # get updated config and/or docker-compose
-            git pull origin/main
-
             # Pull new images
             docker pull ${{ env.IMAGE_PREFIX }}/poker-backend:latest
             docker pull ${{ env.IMAGE_PREFIX }}/poker-frontend:latest
 
             # Restart with new images
             cd ~/poker-app
+
+            # get updated config and/or docker-compose
+            git pull origin/main
+
             export POKER_BOT_PASSWORD=${{ secrets.POKER_BOT_PASSWORD }}
             export REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             export SECRET_KEY=${{ secrets.SECRET_KEY }}
