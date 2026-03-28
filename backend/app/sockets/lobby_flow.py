@@ -3,6 +3,8 @@ from flask_socketio import emit
 from app.sockets.helpers import cashout_and_remove_player, get_user_bankroll, create_and_fund_player
 from app.globals import StatusEnum
 
+BOT_USERNAME = "PokerBot"
+
 def validate_join_game(game_id: str, connected_game_id: str | None, username: str) -> bool:
     if not state.check_game_id(game_id):
         emit("error", {"message": "Game not found!"})
@@ -118,6 +120,25 @@ def get_game_info(game_id: str):
              "buy_in": state.get_buy_in(game_id),
              "status": state.get_game_status(game_id), 
              "joiner_queue": state.get_joiner_queue(game_id)}
+
+def add_bot_to_game(game_id: str) -> None:
+    if BOT_USERNAME in state.get_players(game_id) or BOT_USERNAME in state.get_joiner_queue(game_id):
+        emit("error", {"message": "A bot is already in this game."})
+        return
+
+    status = state.get_game_status(game_id)
+    if status == StatusEnum.waiting_to_start.value:
+        state.append_to_players(game_id, BOT_USERNAME)
+        emit("player_joined", {"game_id": game_id, "username": BOT_USERNAME}, broadcast=True)
+    elif status == StatusEnum.between_hands.value:
+        add_new_player(game_id, BOT_USERNAME)
+    else:  # in_progress
+        state.append_to_joiner_queue(game_id, BOT_USERNAME)
+        emit("player_queued", {"game_id": game_id, "username": BOT_USERNAME}, broadcast=True)
+
+    from app.bot.poker_bot import PokerBot
+    from app.bot.heuristic_engine import HeuristicDecisionEngine
+    state.add_bot(game_id, BOT_USERNAME, PokerBot(BOT_USERNAME, HeuristicDecisionEngine()))
 
 def create_game(game_id: str, username: str, small_blind: int, big_blind: int, buy_in: int):
     state.set_connected_user(game_id, username, state.get_user_sid(username)) # TODO remove the username overwrite 

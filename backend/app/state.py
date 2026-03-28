@@ -20,7 +20,8 @@ def set_new_game_id(game_id: str, username:str, small_blind: int, big_blind: int
         "joiner_queue": [],
         "leaver_queue": [],
         "rebuy_queue": [],
-        "hand_number": 0}
+        "hand_number": 0,
+        "bots": {}}
 
 def get_game(game_id: str) -> PokerRound | None:
     return games.get(game_id, {}).get("game")
@@ -139,6 +140,19 @@ def delete_player_timers(game_id: str):
     for timer in timers.values():
         timer.cancel()
         timer.cleanup()
+
+# bots
+def get_bots(game_id: str) -> dict:
+    return games.get(game_id, {}).get("bots", {})
+
+def add_bot(game_id: str, username: str, bot) -> None:
+    games[game_id]["bots"][username] = bot
+
+def remove_bot(game_id: str, username: str) -> None:
+    games.get(game_id, {}).get("bots", {}).pop(username, None)
+
+def is_bot(game_id: str, username: str) -> bool:
+    return username in games.get(game_id, {}).get("bots", {})
 
 # connected_users
 def get_connected_user(sid: str) -> tuple[str, str]:
