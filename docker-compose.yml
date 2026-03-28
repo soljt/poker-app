@@ -1,26 +1,26 @@
 services:
   backend:
-    build: ./backend
+    image: ghcr.io/soljt/poker-backend:latest
     container_name: poker-backend
     depends_on:
       - db
       - redis
     environment:
-      - DATABASE_URL=postgresql://pokeruser:pokerpass@db:5432/pokerdb
+      - DATABASE_URL=postgresql://pokeruser:${POSTGRES_PASSWORD}@db:5432/pokerdb
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - CACHE_REDIS_HOST=redis
       - CACHE_REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    volumes:
-      - ./backend:/app
+      - POKER_BOT_PASSWORD=${POKER_BOT_PASSWORD}
+    # no volume needed for hot reload (on prod)
     networks:
       - web
       - backend_net
 
   frontend:
-    build: ./frontend
+    image: ghcr.io/soljt/poker-frontend:latest
     container_name: poker-frontend
     # moving to global reverse proxy for VM
     # ports:
@@ -28,10 +28,7 @@ services:
     #   - "443:443"
     depends_on:
       - backend
-    volumes: # PRODUCTION ONLY
-      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
-      # we'll terminate ssl at the global reverse proxy
-      # - /etc/ssl/poker:/etc/ssl/poker:ro  # Mount certs from host into container (read-only)
+    # no volumes; the nginx conf should be baked into the image
     networks:
       - web
       - backend_net
@@ -42,7 +39,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: pokeruser
-      POSTGRES_PASSWORD: pokerpass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: pokerdb
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
@@ -59,9 +56,6 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     networks:
       - backend_net
-
-volumes:
-  pgdata:
 
 networks:
   web:
