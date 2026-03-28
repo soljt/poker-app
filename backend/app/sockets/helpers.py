@@ -3,6 +3,7 @@ from app.db import db
 from app.models.user import User
 from app.game_logic.game_logic import Player, PokerRound
 import app.state as state
+from app.recording.game_recorder import recorder
 
 class UserValidationError(Exception):
     def __init__(self, reason="Could not find the user in active users"):
@@ -71,11 +72,12 @@ def remove_user_from_game(game_id: str, username: str):
     socketio.emit("player_left", {"game_id": game_id, "username": username})  # notify all others to update Lobby
 
 def delete_game(game_id: str):
+    recorder.discard_hand(game_id)
     game = state.get_game(game_id)
     if game:
         game.refund_pot()
         cashout_all_players(game_id)
-        
+
     remove_users_from_game(game_id)
     state.remove_game(game_id)
     state.delete_player_timers(game_id)

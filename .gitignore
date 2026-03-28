@@ -3,3 +3,4 @@ frontend/public/message.html
 redis.conf
 postgres_data_dev/
 .vscode/
+backend/game_data/

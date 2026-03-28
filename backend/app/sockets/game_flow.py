@@ -7,6 +7,7 @@ from app.game_logic.game_logic import PokerRound
 from app.timer.inaction_timer import InactionTimer
 import app.state as state
 from app.globals import StatusEnum
+from app.recording.game_recorder import recorder
 
 def emit_player_turn(game_id: str, delay=45):
     game = state.get_game(game_id)
@@ -100,6 +101,7 @@ def emit_next_player_turn(game_id: str) -> bool:
 
 def handle_player_action_and_emit_state(game_id: str, username: str, action: str, amount: int| None):
     game = state.get_game(game_id)
+    recorder.record_action(game_id, username, action, amount, game)
     game.handle_player_action(username, action, amount)
     emit_updated_game_state(game)
 
@@ -125,6 +127,8 @@ def handle_start_game_helper(game_id: str):
     print(game)
     game.start_round()
     state.set_game(game_id, game)
+    hand_number = state.increment_hand_number(game_id)
+    recorder.start_hand(game_id, hand_number, game)
     socketio.emit("game_started", {"message": "Game started successfully"}, to=game_id)
     emit_player_turn(game_id)
 
@@ -142,6 +146,7 @@ def kick_broke_players(game_id: str):
     
 def handle_end_of_round(game_id):
     pot_award_info = emit_round_over(game_id)
+    recorder.finish_hand(game_id, state.get_game(game_id), pot_award_info)
 
     # determine which players, if any, must show their hands
     emit_revealed_hands(game_id, pot_award_info)
@@ -194,6 +199,8 @@ def start_next_round_after_delay(app, game_id, delay=10):
 
             state.set_game_status(game_id, StatusEnum.in_progress.value)
             game.start_next_round()
+            hand_number = state.increment_hand_number(game_id)
+            recorder.start_hand(game_id, hand_number, game)
             socketio.emit("game_started", {"message": "Game joined successfully"}, to=game_id)
             emit_updated_game_state(game)
             emit_player_turn(game_id)
