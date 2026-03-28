@@ -11,6 +11,7 @@ implementation logic.
 
 from app.bot.decision_engine import DecisionEngine
 from app.game_logic.game_logic import Card, best_hand_from_cards
+import math
 
 DEFAULT_PHASE_ALPHA = {"flop": 0.4, "turn": 0.7, "river": 1.0}
 
@@ -44,8 +45,8 @@ class HeuristicDecisionEngine(DecisionEngine):
 
     def __init__(
         self,
-        aggr_thresh: float = 0.30,
-        call_thresh: float = 0.05,
+        aggr_thresh: float = 0.4,
+        call_thresh: float = 0.2,
         raise_fraction: float = 0.25,
         phase_alpha: dict | None = None,
         preflop_pair_bonus: float = 0.30,
@@ -150,16 +151,25 @@ def _preflop_strength(
     return min(base, 1.0)
 
 
-def _current_strength(hole_cards: list, board_cards: list) -> float:
-    """Best made-hand rank, normalised to 0–1."""
+def _current_strength(hole_cards: list, board_cards: list, base: float = 4.0) -> float:
+    """Best made-hand rank, normalised to 0–1.
+    base controls curvature — higher = bigger jump off rank 1.
+    """
     rank = best_hand_from_cards(hole_cards + board_cards).hand_rank
-    return (rank - 1) / 9.0
+    x = (rank - 1) / 9.0                           # linear 0–1
+    return math.log(1 + x * (base - 1)) / math.log(base)  # logarithmic 0–1
 
 
 def _potential(
-    hole_cards: list, board_cards: list, current_norm: float
+    hole_cards: list, board_cards: list, current_norm: float,
+    ceiling_weight: float = 0.5
 ) -> float:
-    """Expected improvement in normalised strength from the next unknown card."""
+    """Expected improvement in normalised strength from the next unknown card.
+    
+    ceiling_weight blends avg future strength with max future strength,
+    so draws with a high ceiling (e.g. flush draw) aren't diluted by the
+    majority of cards that don't hit.
+    """
     known_reprs = {repr(c) for c in hole_cards + board_cards}
     remaining = [
         Card(r, s)
@@ -169,9 +179,12 @@ def _potential(
     ]
     if not remaining:
         return 0.0
+
     future_norms = [
-        (_current_strength(hole_cards, board_cards + [c]))
+        _current_strength(hole_cards, board_cards + [c])
         for c in remaining
     ]
     avg_future = sum(future_norms) / len(future_norms)
-    return max(0.0, avg_future - current_norm)
+    max_future = max(future_norms)
+    blended = (1 - ceiling_weight) * avg_future + ceiling_weight * max_future
+    return max(0.0, blended - current_norm)
