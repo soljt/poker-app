@@ -19,7 +19,8 @@ def set_new_game_id(game_id: str, username:str, small_blind: int, big_blind: int
         "status": StatusEnum.waiting_to_start.value,
         "joiner_queue": [],
         "leaver_queue": [],
-        "rebuy_queue": []}
+        "rebuy_queue": [],
+        "hand_number": 0}
 
 def get_game(game_id: str) -> PokerRound | None:
     return games.get(game_id, {}).get("game")
@@ -105,6 +106,13 @@ def remove_from_players(game_id: str, username: str):
         arr.remove(username)
 
 # status
+def get_hand_number(game_id: str) -> int:
+    return games.get(game_id, {}).get("hand_number", 0)
+
+def increment_hand_number(game_id: str) -> int:
+    games[game_id]["hand_number"] += 1
+    return games[game_id]["hand_number"]
+
 def get_game_status(game_id: str) -> StatusEnum:
     return games.get(game_id, {}).get("status", "")
 
