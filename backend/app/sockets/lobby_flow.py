@@ -93,7 +93,7 @@ def leave_game(game_id: str, username: str):
     
     emit("error", {"message": f"User {username} left the game!"}, to=game_id)
 
-def validate_create_game(game_id: str, username: str, buy_in: int):
+def validate_create_game(game_id: str, username: str, buy_in: int, small_blind: int, big_blind: int):
     # could be better - check all hosts of all games
     if state.check_game_id(game_id):
         emit("error", {"message": "You have already created a game."})
@@ -102,6 +102,10 @@ def validate_create_game(game_id: str, username: str, buy_in: int):
     if get_user_bankroll(username) < buy_in:
         emit("error", {"message": "You don't have enough to buy in to your own game..."})
         return ""
+
+    if not (small_blind*2 <= big_blind <= small_blind*3):
+        emit("error", {"message": "The big blind should be between 2 and 3 times the small blind."})
+        return False
     
     return True
 

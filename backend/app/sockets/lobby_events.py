@@ -54,7 +54,7 @@ def handle_create_game(data):
     username, _ = state.get_connected_user(request.sid)
     game_id = f"game_{username}"
 
-    val = validate_create_game(game_id, username, data["buy_in"])
+    val = validate_create_game(game_id, username, data["buy_in"], data["small_blind"], data["big_blind"])
     if val != True:
         return val
     

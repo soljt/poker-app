@@ -32,10 +32,8 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value)) {
-      setCustomAmount(value);
-    }
+    const { value } = e.target;
+    setCustomAmount(value === "" ? null : parseInt(value));
   };
 
   const handleActionClick = (action: ActionItem) => {
