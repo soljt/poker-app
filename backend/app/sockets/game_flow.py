@@ -61,7 +61,7 @@ def emit_revealed_hands(game_id: str, pot_award_info: dict):
         socketio.emit("hand_revealed", entry, to=game_id)
 
 def emit_bot_hands(game_id: str):
-    """Always reveal bot hole cards at end of hand for full transparency."""
+    """Optionally reveal bot hole cards at end of hand for full transparency."""
     game = state.get_game(game_id)
     for username in list(state.get_bots(game_id)):
         player = game.get_player(username)
