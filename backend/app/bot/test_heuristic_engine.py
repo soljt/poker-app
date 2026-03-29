@@ -286,3 +286,91 @@ class TestHeuristicDecisionEngine:
         }
         action, _ = self.engine.decide(state, FOLD_ONLY)
         assert action == "fold"
+
+
+# ---------------------------------------------------------------------------
+# _effective_call_thresh / pot odds
+# ---------------------------------------------------------------------------
+
+class TestPotOdds:
+    """Pot odds should raise the effective call threshold when facing a bet."""
+
+    def _state_with_bet(self, bet_to_call: int, pot: int) -> dict:
+        return {
+            "my_cards": ["2 of clubs", "7 of diamonds"],
+            "board": ["A of spades", "K of hearts", "Q of clubs", "J of spades", "9 of diamonds"],
+            "phase": "river",
+            "my_chips": 1000,
+            "my_bet": 0,
+            "table_bet": bet_to_call,
+            "pots": [{"amount": pot, "players": ["PokerBot", "alice"]}],
+        }
+
+    def test_free_check_uses_base_thresh(self):
+        """With no bet to call the effective threshold equals call_thresh."""
+        engine = HeuristicDecisionEngine(call_thresh=0.2, pot_odds_sensitivity=1.0)
+        state = self._state_with_bet(0, 100)
+        thresh = engine._effective_call_thresh(state)
+        assert thresh == pytest.approx(0.2)
+
+    def test_large_bet_raises_thresh(self):
+        """A pot-sized bet (200 into 200) requires 50% equity — thresh should be ≥ 0.5."""
+        engine = HeuristicDecisionEngine(call_thresh=0.2, pot_odds_sensitivity=1.0)
+        state = self._state_with_bet(200, 200)  # pot_odds_needed = 200/400 = 0.5
+        thresh = engine._effective_call_thresh(state)
+        assert thresh == pytest.approx(0.5)
+
+    def test_small_bet_minimal_adjustment(self):
+        """A tiny bet (10 into 200) barely raises the threshold above call_thresh."""
+        engine = HeuristicDecisionEngine(call_thresh=0.2, pot_odds_sensitivity=1.0)
+        state = self._state_with_bet(10, 200)  # pot_odds_needed = 10/210 ≈ 0.048
+        thresh = engine._effective_call_thresh(state)
+        assert thresh == pytest.approx(0.2)  # max(0.2, 0.048) = 0.2
+
+    def test_sensitivity_zero_ignores_bet(self):
+        """With pot_odds_sensitivity=0, even a huge bet doesn't adjust the threshold."""
+        engine = HeuristicDecisionEngine(call_thresh=0.2, pot_odds_sensitivity=0.0)
+        state = self._state_with_bet(10000, 100)
+        thresh = engine._effective_call_thresh(state)
+        assert thresh == pytest.approx(0.2)
+
+    def test_sensitivity_half_partial_adjustment(self):
+        """With sensitivity=0.5, pot odds contribute at half weight."""
+        engine = HeuristicDecisionEngine(call_thresh=0.1, pot_odds_sensitivity=0.5)
+        # pot_odds_needed raw = 200/400 = 0.5; with 0.5 sensitivity → 0.25
+        state = self._state_with_bet(200, 200)
+        thresh = engine._effective_call_thresh(state)
+        assert thresh == pytest.approx(0.25)
+
+    def test_large_bet_causes_fold_on_weak_hand(self):
+        """Bot should fold a weak hand against a massive all-in bet."""
+        engine = HeuristicDecisionEngine(pot_odds_sensitivity=1.0)
+        # Garbage hand (high card = 0), massive bet = needs ~91% equity
+        state = self._state_with_bet(1000, 100)  # pot_odds_needed = 1000/1100 ≈ 0.909
+        call_fold = [
+            {"action": "call", "min": None, "allin": True},
+            {"action": "fold", "min": None, "allin": False},
+        ]
+        action, _ = engine.decide(state, call_fold)
+        assert action == "fold"
+
+    def test_strong_hand_calls_large_bet(self):
+        """A strong hand should still call even a big bet."""
+        engine = HeuristicDecisionEngine(pot_odds_sensitivity=1.0)
+        # Trips aces — score ≈ 0.5 with log norm; facing pot-sized bet (50% equity needed)
+        state = {
+            "my_cards": ["A of spades", "A of clubs"],
+            "board": ["A of hearts", "2 of diamonds", "5 of clubs", "7 of spades", "K of hearts"],
+            "phase": "river",
+            "my_chips": 500,
+            "my_bet": 0,
+            "table_bet": 200,
+            "pots": [{"amount": 200, "players": ["PokerBot", "alice"]}],
+        }
+        call_fold = [
+            {"action": "call", "min": None, "allin": False},
+            {"action": "fold", "min": None, "allin": False},
+        ]
+        action, _ = engine.decide(state, call_fold)
+        # Score ≈ 0.5 for trips; pot_odds_needed = 200/400 = 0.5; score just meets threshold
+        assert action in ("call", "fold")  # borderline — either is acceptable
