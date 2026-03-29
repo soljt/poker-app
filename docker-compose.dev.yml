@@ -15,6 +15,7 @@ services:
       - POKER_BOT_PASSWORD=${POKER_BOT_PASSWORD}
     volumes:
       - ./backend:/app
+      - ./recorded_game_data:/app/game_data
     ports:
       - "5000:5000"
     networks:

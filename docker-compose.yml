@@ -15,6 +15,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - POKER_BOT_PASSWORD=${POKER_BOT_PASSWORD}
     # no volume needed for hot reload (on prod)
+    volumes:
+      - ./recorded_game_data:/app/game_data
     networks:
       - web
       - backend_net
