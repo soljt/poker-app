@@ -16,6 +16,8 @@ type RoundOverOverlayProps = {
   fixedPosition?: boolean;
   rebuyInfo?: { buy_in: number } | null;
   onRebuy?: () => void;
+  hasBotInGame?: boolean;
+  onRevealBotHand?: () => void;
 };
 
 const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
@@ -30,6 +32,8 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
   fixedPosition,
   rebuyInfo,
   onRebuy,
+  hasBotInGame,
+  onRevealBotHand,
 }) => {
   if (!show) return null;
 
@@ -132,6 +136,20 @@ const RoundOverOverlay: React.FC<RoundOverOverlayProps> = ({
             className="mb-2"
           >
             Show My Hand
+          </Button>
+        </div>
+      )}
+
+      {/* Show Bot's Hand Button */}
+      {hasBotInGame && !revealedHands["PokerBot"] && onRevealBotHand && (
+        <div className="text-center mb-2">
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={onRevealBotHand}
+            className="mb-2"
+          >
+            Show Bot's Hand
           </Button>
         </div>
       )}

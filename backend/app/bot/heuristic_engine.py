@@ -22,10 +22,10 @@ class HeuristicDecisionEngine(DecisionEngine):
     ----------
     aggr_thresh : float
         Score threshold above which the bot plays aggressively (raise/bet).
-        Default 0.55.
+        Default 0.4.
     call_thresh : float
         Score threshold above which the bot calls/checks rather than folding.
-        Default 0.35.
+        Default 0.2.
     raise_fraction : float
         Fraction of the bot's stack used as the target raise size at maximum
         aggression (score=1.0). Actual raise scales linearly between min_raise
@@ -41,17 +41,23 @@ class HeuristicDecisionEngine(DecisionEngine):
     preflop_connected_bonus : float
         Added to base preflop score when hole card rank gap is 1 or 2.
         Default 0.05.
+    pot_odds_sensitivity : float
+        Controls how much the size of the bet faced raises the call threshold.
+        At 1.0 (default) the effective call threshold equals max(call_thresh,
+        pot_odds_needed), where pot_odds_needed = bet_to_call / (pot +
+        bet_to_call). At 0.0 pot odds are ignored entirely.
     """
 
     def __init__(
         self,
         aggr_thresh: float = 0.4,
-        call_thresh: float = 0.2,
+        call_thresh: float = 0.1,
         raise_fraction: float = 0.25,
         phase_alpha: dict | None = None,
         preflop_pair_bonus: float = 0.30,
         preflop_suited_bonus: float = 0.05,
         preflop_connected_bonus: float = 0.05,
+        pot_odds_sensitivity: float = 1.0,
     ):
         self.aggr_thresh = aggr_thresh
         self.call_thresh = call_thresh
@@ -60,6 +66,7 @@ class HeuristicDecisionEngine(DecisionEngine):
         self.preflop_pair_bonus = preflop_pair_bonus
         self.preflop_suited_bonus = preflop_suited_bonus
         self.preflop_connected_bonus = preflop_connected_bonus
+        self.pot_odds_sensitivity = pot_odds_sensitivity
 
     # ── public interface ────────────────────────────────────────────────────
 
@@ -97,6 +104,7 @@ class HeuristicDecisionEngine(DecisionEngine):
         self, score: float, available_actions: list[dict], game_state: dict
     ) -> tuple[str, int | None]:
         actions_by_name = {a["action"]: a for a in available_actions}
+        effective_call_thresh = self._effective_call_thresh(game_state)
 
         if score >= self.aggr_thresh:
             for name in ("raise", "reraise", "bet", "call", "check"):
@@ -110,7 +118,7 @@ class HeuristicDecisionEngine(DecisionEngine):
                         amount = max(amount, int(target))
                     return name, amount
 
-        if score >= self.call_thresh:
+        if score >= effective_call_thresh:
             for name in ("check", "call"):
                 if name in actions_by_name:
                     return name, None
@@ -124,6 +132,27 @@ class HeuristicDecisionEngine(DecisionEngine):
         # last resort fallback
         a = available_actions[0]
         return a["action"], a.get("min")
+
+    def _effective_call_thresh(self, game_state: dict) -> float:
+        """Raise the call threshold proportionally to pot odds when facing a bet.
+
+        pot_odds_needed = bet_to_call / (total_pot + bet_to_call)
+        effective_thresh = max(call_thresh, pot_odds_needed * pot_odds_sensitivity)
+        """
+        table_bet = game_state.get("table_bet", 0)
+        my_bet = game_state.get("my_bet", 0)
+        bet_to_call = max(0, table_bet - my_bet)
+
+        if bet_to_call == 0 or self.pot_odds_sensitivity == 0:
+            return self.call_thresh
+
+        total_pot = sum(p["amount"] for p in game_state.get("pots", []))
+        denominator = total_pot + bet_to_call
+        if denominator == 0:
+            return self.call_thresh
+
+        pot_odds_needed = (bet_to_call / denominator) * self.pot_odds_sensitivity
+        return max(self.call_thresh, pot_odds_needed)
 
 
 # ── module-level pure helpers (importable for unit tests) ──────────────────
