@@ -3,4 +3,7 @@ frontend/public/message.html
 redis.conf
 postgres_data_dev/
 .vscode/
+
+# docker mounts backend/game_data/ to recorded_game_data/ on host
 backend/game_data/
+recorded_game_data/
