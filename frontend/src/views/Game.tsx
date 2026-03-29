@@ -182,6 +182,10 @@ const Game = () => {
     socket.emit("reveal_hand"); // backend can resolve identity via session/auth
   };
 
+  const handleRevealBotHand = () => {
+    socket.emit("reveal_bot_hand");
+  };
+
   const handleRebuy = () => {
     socket.emit("rebuy");
   };
@@ -243,6 +247,8 @@ const Game = () => {
           fixedPosition={true}
           rebuyInfo={rebuyInfo}
           onRebuy={handleRebuy}
+          hasBotInGame={gameData.players.some((p) => p.username === "PokerBot")}
+          onRevealBotHand={handleRevealBotHand}
         />
       ) : (
         user?.username === playerToAct &&

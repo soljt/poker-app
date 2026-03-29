@@ -48,6 +48,12 @@ def handle_reveal_hand():
     hand = game.get_player_hand(username)
     emit("hand_revealed", {"username": username, "hand": hand}, to=game_id)
 
+@socketio.on("reveal_bot_hand")
+def handle_reveal_bot_hand():
+    from app.sockets.game_flow import emit_bot_hands
+    _, game_id = validate_player(request)
+    emit_bot_hands(game_id)
+
 @socketio.on("rebuy")
 def handle_rebuy():
     try:

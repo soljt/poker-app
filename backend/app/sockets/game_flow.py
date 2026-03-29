@@ -60,6 +60,17 @@ def emit_revealed_hands(game_id: str, pot_award_info: dict):
     for entry in must_show_players:
         socketio.emit("hand_revealed", entry, to=game_id)
 
+def emit_bot_hands(game_id: str):
+    """Optionally reveal bot hole cards at end of hand for full transparency."""
+    game = state.get_game(game_id)
+    for username in list(state.get_bots(game_id)):
+        player = game.get_player(username)
+        if player and player.hole_cards:
+            socketio.emit("hand_revealed", {
+                "username": username,
+                "hand": [repr(c) for c in player.hole_cards],
+            }, to=game_id)
+
 def cleanup_leavers(game_id: str):
     if state.get_host(game_id) in state.get_leaver_queue(game_id):
         socketio.emit("message", "Game host removed - assigning new host.", to=game_id)

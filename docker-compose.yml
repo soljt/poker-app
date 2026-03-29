@@ -34,7 +34,7 @@ services:
       - backend_net
 
   db:
-    image: postgres
+    image: postgres:17-alpine
     container_name: poker-postgres
     restart: always
     environment:
