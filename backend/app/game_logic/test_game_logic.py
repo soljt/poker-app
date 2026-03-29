@@ -1,4 +1,4 @@
-from game_logic import Player, PokerRound, Hand, Card
+from game_logic import Player, PokerRound, Hand, Card, best_hand_from_cards
 import unittest
 
 class TestBettingFunctions(unittest.TestCase):
@@ -52,6 +52,11 @@ class TestHandRankingFunctions(unittest.TestCase):
         self.assertEqual(hand3.card_ranks, [8, 5])
         self.assertTrue(hand3 < hand1)
 
+    def test_quad_twos(self):
+        hand1 = Hand([Card("2", "diamonds"), Card("A", "diamonds"), Card("2", "hearts"), Card("2", "spades"), Card("2", "clubs")])
+        self.assertEqual(hand1.hand_rank, 8)
+        self.assertEqual(hand1.card_ranks, [0, 12])
+
     def test_full_house(self):
         hand1 = Hand([Card("10", "diamonds"), Card("A", "diamonds"), Card("10", "hearts"), Card("A", "spades"), Card("10", "clubs")])
         self.assertEqual(hand1.hand_rank, 7)
@@ -65,6 +70,15 @@ class TestHandRankingFunctions(unittest.TestCase):
         self.assertEqual(hand3.card_ranks, [8, 5])
         self.assertTrue(hand3 < hand1)
         self.assertTrue(hand3 > hand2)
+
+    def test_twos_full(self):
+        hand1 = Hand([Card("2", "diamonds"), Card("A", "diamonds"), Card("2", "hearts"), Card("A", "spades"), Card("2", "clubs")])
+        self.assertEqual(hand1.hand_rank, 7)
+        self.assertEqual(hand1.card_ranks, [0, 12])
+        hand2 = Hand([Card("8", "diamonds"), Card("8", "hearts"), Card("8", "clubs"), Card("Q", "spades"), Card("Q", "diamonds")])
+        self.assertEqual(hand2.hand_rank, 7)
+        self.assertEqual(hand2.card_ranks, [6, 10])
+        self.assertTrue(hand1 < hand2)
 
     def test_flush(self):
         hand1 = Hand([Card("K", "spades"), Card("A", "spades"), Card("5", "spades"), Card("10", "spades"), Card("Q", "spades")])
@@ -152,6 +166,11 @@ class TestHandRankingFunctions(unittest.TestCase):
         self.assertEqual(hand2.hand_rank, 2)
         self.assertEqual(hand2.card_ranks, [0, 12, 6, 3])
         self.assertTrue(hand2 > hand1)  
+
+    def test_best_hand_calculation(self):
+        board = [Card("6", "hearts"), Card("2", "clubs"), Card("2", "spades"), Card("4", "diamonds"), Card("A", "spades")]
+        my_cards = [Card("10", "hearts"), Card("2", "hearts")]
+        self.assertTrue(Hand.HAND_RANKS.get(best_hand_from_cards(board + my_cards).evaluate()[0]) == "Trips")
 
 class TestDetermineWinnerFunctions(unittest.TestCase):
 

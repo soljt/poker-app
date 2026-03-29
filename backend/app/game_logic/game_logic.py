@@ -103,13 +103,15 @@ class Hand:
         trips_rank = [i for i in rank_counts if rank_counts[i] == 3]
         if trips_rank:
             trips_rank = Card.RANKS.index(trips_rank[0])
+        else:
+            trips_rank = None
 
         pair_ranks = [i for i in rank_counts if (rank_counts[i] == 2 and i != trips_rank)]
         if pair_ranks:
             pair_ranks = [Card.RANKS.index(pair_rank) for pair_rank in pair_ranks] # possibiliy of no trips and two pair
             pair_ranks.sort(reverse=True)
 
-        if trips_rank and pair_ranks:
+        if trips_rank is not None and pair_ranks:
             return (7, [trips_rank, pair_ranks[0]]) # if there are trips, there can only be one pair
         
         # flush
@@ -124,7 +126,7 @@ class Hand:
                 return (5, [top_card_rank_index])
         
         # trips
-        if trips_rank:
+        if trips_rank is not None:
             return (4, [trips_rank] + list(reversed([Card.RANKS.index(card.rank) for card in self.cards if Card.RANKS.index(card.rank) != trips_rank])))
         
         # two pair
