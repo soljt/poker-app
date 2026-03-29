@@ -1,3 +1,7 @@
+html {
+  scrollbar-gutter: stable;
+}
+
 .big-handmade-hearts-bg {
   background-image: url('/images/handmade2-hearts-bg.png');
   background-repeat: repeat;
