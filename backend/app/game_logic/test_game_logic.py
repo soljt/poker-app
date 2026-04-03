@@ -1,4 +1,4 @@
-from game_logic import Player, PokerRound, Hand, Card, best_hand_from_cards
+from app.game_logic import Player, PokerRound, Hand, Card, best_hand_from_cards
 import unittest
 
 class TestBettingFunctions(unittest.TestCase):
@@ -170,7 +170,7 @@ class TestHandRankingFunctions(unittest.TestCase):
     def test_best_hand_calculation(self):
         board = [Card("6", "hearts"), Card("2", "clubs"), Card("2", "spades"), Card("4", "diamonds"), Card("A", "spades")]
         my_cards = [Card("10", "hearts"), Card("2", "hearts")]
-        self.assertTrue(Hand.HAND_RANKS.get(best_hand_from_cards(board + my_cards).evaluate()[0]) == "Trips")
+        self.assertTrue(best_hand_from_cards(board + my_cards).hand_rank.label == "Trips")
 
 class TestDetermineWinnerFunctions(unittest.TestCase):
 
@@ -179,12 +179,11 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         round.board = [Card("K", "hearts"), Card("J", "hearts"), Card("10", "spades"), Card("Q", "spades"), Card("5", "diamonds")]
         player = round.table.btn
         player.hole_cards = [Card("A", "diamonds"), Card("6", "spades")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("A", "spades"), Card("6", "hearts")]
 
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         self.assertEqual(round.rank_active_players(), [[round.table.btn, round.table.bb]])
 
@@ -192,14 +191,12 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         round.board = [Card("10", "hearts"), Card("Q", "spades"), Card("J", "spades"), Card("Q", "clubs"), Card("3", "clubs")]
         player = round.table.btn
         player.hole_cards = [Card("A", "diamonds"), Card("4", "hearts")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("2", "spades"), Card("7", "diamonds")]
 
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
             print(player.best_hand.hand_rank, ' | ', player.best_hand.card_ranks)
-            player = player.left
-        print(player.left.hole_cards == player.hole_cards)
         self.assertEqual(round.rank_active_players(), [[round.table.btn], [round.table.bb]])
 
     def test_folded_players(self):
@@ -207,15 +204,14 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         round.board = [Card("10", "hearts"), Card("Q", "spades"), Card("A", "spades"), Card("Q", "clubs"), Card("3", "clubs")]
         player = round.table.btn
         player.hole_cards = [Card("A", "diamonds"), Card("4", "hearts")]
-        round.handle_fold(player) # folds pair of aces
-        player = player.left
+        round.apply_player_action(player, "fold", None)  # folds pair of aces
+        player = round.table.next_player(player)
         player.hole_cards = [Card("2", "spades"), Card("7", "diamonds")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("10", "spades"), Card("7", "hearts")]
 
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         self.assertEqual(round.rank_active_players(), [[round.table.bb], [round.table.sb]])
 
@@ -230,10 +226,8 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         kenna.hole_cards = [Card("4", "clubs"), Card("9", "clubs")]
         louis.hole_cards = [Card("9", "diamonds"), Card("J", "diamonds")]
         beeps.hole_cards = [Card("8", "diamonds"), Card("Q", "hearts")]
-        player = round.table.btn
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         self.assertEqual(round.rank_active_players(), [[louis], [sol], [beeps], [kenna]])
 
@@ -276,15 +270,14 @@ class TestDetermineShowers(unittest.TestCase):
         round.board = [Card("J", "hearts"), Card("J", "diamonds"), Card("5", "hearts"), Card("Q", "clubs"), Card("5", "diamonds")]
         player = round.table.btn
         player.hole_cards = [Card("4", "clubs"), Card("7", "hearts")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
 
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         ranked_active_players = round.rank_active_players()
-        pot_award_info = round.pot.award_pot(ranked_active_players)
+        pot_award_info, _ = round.pot.award_pot(ranked_active_players)
         self.assertEqual(set([entry["username"] for entry in round.determine_must_show_players(pot_award_info)]), set(["sol", "kenna"]))
 
     def test_allin_player_loss(self):
@@ -296,30 +289,25 @@ class TestDetermineShowers(unittest.TestCase):
         round.start_round()
         player = round.table.btn
         player.hole_cards = [Card("J", "clubs"), Card("6", "diamonds")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("K", "clubs"), Card("Q", "diamonds")]
         print(round.get_player_to_act_and_actions())
 
-
-        # loop here
-        actions_sequence = [{"username": "soljt", "action": "raise", "amount": 200}, 
+        actions_sequence = [{"username": "soljt", "action": "raise", "amount": 200},
          {"username": "kenna", "action": "call", "amount": None},
          {"username": "kenna", "action": "bet", "amount": 300},
          {"username": "soljt", "action": "call", "amount": None}]
-        i=0
+        i = 0
         while not round.is_action_finished:
             action = actions_sequence[i]
             round.handle_player_action(action["username"], action["action"], action["amount"])
             round.get_player_to_act_and_actions()
-            i+=1
+            i += 1
         round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
-        
-        # get players to update their best hands
-        player = round.table.btn
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
-        
+
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
+
         pot_award_info = round.end_poker_round()
         must_show = round.determine_must_show_players(pot_award_info)
         self.assertEqual(set([entry["username"] for entry in must_show]), set(["soljt"]))
@@ -334,9 +322,9 @@ class TestShowWinningHand(unittest.TestCase):
         round.board = [Card("J", "hearts"), Card("J", "diamonds"), Card("5", "hearts"), Card("Q", "clubs"), Card("5", "diamonds")]
         player = round.table.btn
         player.hole_cards = [Card("J", "clubs"), Card("7", "hearts")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("10", "diamonds"), Card("3", "hearts")]
 
         round.apply_player_action(p1, "bet", 900)
@@ -344,9 +332,8 @@ class TestShowWinningHand(unittest.TestCase):
         round.apply_player_action(p3, "call", 900)
         round.apply_player_action(p3, "fold", None)
 
-        for _ in range(round.table.num_seats):
-            player.determine_best_hand(round.board)
-            player = player.left
+        for player in round.table._seats:
+            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         round.is_action_finished = True
         round.is_poker_round_over = True
@@ -374,7 +361,7 @@ class TestBugs(unittest.TestCase):
 
         self.assertTrue(game.is_poker_round_over)
 
-    def test_bb_all_in_action_not_finished_bug(self): # had to update round.allin_players after taking blinds
+    def test_bb_all_in_action_not_finished_bug(self):
         p1 = Player("soljt", 1000)
         p2 = Player("kenna", 20)
         round = PokerRound([p1, p2], 10, 20)
@@ -383,49 +370,43 @@ class TestBugs(unittest.TestCase):
         round.start_round()
         player = round.table.btn
         player.hole_cards = [Card("J", "clubs"), Card("6", "diamonds")]
-        player = player.left
+        player = round.table.next_player(player)
         player.hole_cards = [Card("K", "clubs"), Card("Q", "diamonds")]
         print(round.get_player_to_act_and_actions())
 
-
-        # loop here
-        actions_sequence = [{"username": "soljt", "action": "call", "amount": None}, 
+        actions_sequence = [{"username": "soljt", "action": "call", "amount": None},
          {"username": "soljt", "action": "check", "amount": None},
          {"username": "soljt", "action": "check", "amount": None},
          {"username": "soljt", "action": "check", "amount": None}]
-        i=0
+        i = 0
         while not round.is_action_finished:
             action = actions_sequence[i]
             round.handle_player_action(action["username"], action["action"], action["amount"])
             if not round.is_action_finished:
                 round.get_player_to_act_and_actions()
-                i+=1
-        # round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
+                i += 1
         pot_award_info = round.end_poker_round()
         self.assertEqual(i, 0)
 
-    def test_allin_player_last_to_act(self): # had to skip allin players when assigning last_to_act after a bet/raise/reraise
+    def test_allin_player_last_to_act(self):
         p1 = Player("brian", 1000)
         p2 = Player("kenna", 10)
         p3 = Player("soljt", 500)
         round = PokerRound([p1, p2, p3], 10, 20)
 
-        # start game
         round.start_round()
         print(round.get_player_to_act_and_actions())
 
-        # loop here
-        actions_sequence = [{"username": "brian", "action": "call", "amount": None}, 
+        actions_sequence = [{"username": "brian", "action": "call", "amount": None},
          {"username": "soljt", "action": "reraise", "amount": 50},
          {"username": "brian", "action": "call", "amount": None}]
-        i=0
+        i = 0
         while i < len(actions_sequence):
             action = actions_sequence[i]
             round.handle_player_action(action["username"], action["action"], action["amount"])
             round.get_player_to_act_and_actions()
             if not round.is_action_finished:
-                i+=1
-        # round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
+                i += 1
         self.assertEqual(round.phase, "flop")
 
 if __name__ == "__main__":
