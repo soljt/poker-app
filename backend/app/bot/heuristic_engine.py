@@ -43,9 +43,16 @@ class HeuristicDecisionEngine(DecisionEngine):
         Default 0.05.
     pot_odds_sensitivity : float
         Controls how much the size of the bet faced raises the call threshold.
-        At 1.0 (default) the effective call threshold equals max(call_thresh,
+        At 1.0 the effective call threshold equals max(call_thresh,
         pot_odds_needed), where pot_odds_needed = bet_to_call / (pot +
-        bet_to_call). At 0.0 pot odds are ignored entirely.
+        bet_to_call). At 0.0 pot odds are ignored entirely. Default 0.5
+        (bot needs half the mathematically correct equity to call, giving
+        it more willingness to hold decent hands against pressure).
+    kicker_weight : float
+        How much of the gap to the next hand rank can be added as a bonus
+        based on the primary tiebreaker card (e.g. pair rank). 0.0 means
+        all pairs score identically; 0.5 means pair of Aces can score up to
+        halfway between pair and two-pair. Default 0.5.
     """
 
     def __init__(
@@ -57,7 +64,8 @@ class HeuristicDecisionEngine(DecisionEngine):
         preflop_pair_bonus: float = 0.30,
         preflop_suited_bonus: float = 0.05,
         preflop_connected_bonus: float = 0.05,
-        pot_odds_sensitivity: float = 1.0,
+        pot_odds_sensitivity: float = 0.5,
+        kicker_weight: float = 0.5,
     ):
         self.aggr_thresh = aggr_thresh
         self.call_thresh = call_thresh
@@ -67,6 +75,7 @@ class HeuristicDecisionEngine(DecisionEngine):
         self.preflop_suited_bonus = preflop_suited_bonus
         self.preflop_connected_bonus = preflop_connected_bonus
         self.pot_odds_sensitivity = pot_odds_sensitivity
+        self.kicker_weight = kicker_weight
 
     # ── public interface ────────────────────────────────────────────────────
 
@@ -89,13 +98,13 @@ class HeuristicDecisionEngine(DecisionEngine):
                 self.preflop_connected_bonus,
             )
 
-        current_norm = _current_strength(hole_cards, board_cards)
+        current_norm = _current_strength(hole_cards, board_cards, kicker_weight=self.kicker_weight)
         alpha = self.phase_alpha.get(phase, 1.0)
 
         if alpha >= 1.0:
             return current_norm
 
-        potential = _potential(hole_cards, board_cards, current_norm)
+        potential = _potential(hole_cards, board_cards, current_norm, kicker_weight=self.kicker_weight)
         return alpha * current_norm + (1.0 - alpha) * potential
 
     # ── action selection ────────────────────────────────────────────────────
@@ -180,24 +189,48 @@ def _preflop_strength(
     return min(base, 1.0)
 
 
-def _current_strength(hole_cards: list, board_cards: list, base: float = 4.0) -> float:
+def _current_strength(
+    hole_cards: list, board_cards: list, base: float = 4.0, kicker_weight: float = 0.0
+) -> float:
     """Best made-hand rank, normalised to 0–1.
+
     base controls curvature — higher = bigger jump off rank 1.
+    kicker_weight (0–1) spreads hands of the same rank apart using their
+    primary tiebreaker (e.g. pair rank). Only applied for pairs and better
+    (rank ≥ 2); high card always scores 0. At kicker_weight=0.5 the maximum
+    bonus is half the gap to the next hand-rank level.
     """
-    rank = best_hand_from_cards(hole_cards + board_cards).hand_rank
+    best = best_hand_from_cards(hole_cards + board_cards)
+    rank = best.hand_rank                           # int 1–10
     x = (rank - 1) / 9.0                           # linear 0–1
-    return math.log(1 + x * (base - 1)) / math.log(base)  # logarithmic 0–1
+    base_score = math.log(1 + x * (base - 1)) / math.log(base)  # logarithmic 0–1
+
+    if kicker_weight > 0 and best.card_ranks and rank >= 2:
+        # Score of the next hand-rank level (or 1.0 for royal flush)
+        if rank < 10:
+            next_x = rank / 9.0          # == (rank + 1 - 1) / 9
+            next_score = math.log(1 + next_x * (base - 1)) / math.log(base)
+        else:
+            next_score = 1.0
+        rank_gap = next_score - base_score
+        # card_ranks[0] is the primary tiebreaker (0–12); scale to fraction of gap
+        kicker_bonus = (best.card_ranks[0] / 12.0) * rank_gap * kicker_weight
+        return min(1.0, base_score + kicker_bonus)
+
+    return base_score
 
 
 def _potential(
     hole_cards: list, board_cards: list, current_norm: float,
-    ceiling_weight: float = 0.5
+    ceiling_weight: float = 0.5,
+    kicker_weight: float = 0.0,
 ) -> float:
     """Expected improvement in normalised strength from the next unknown card.
-    
+
     ceiling_weight blends avg future strength with max future strength,
     so draws with a high ceiling (e.g. flush draw) aren't diluted by the
     majority of cards that don't hit.
+    kicker_weight is forwarded to _current_strength for consistent scoring.
     """
     known_reprs = {repr(c) for c in hole_cards + board_cards}
     remaining = [
@@ -210,7 +243,7 @@ def _potential(
         return 0.0
 
     future_norms = [
-        _current_strength(hole_cards, board_cards + [c])
+        _current_strength(hole_cards, board_cards + [c], kicker_weight=kicker_weight)
         for c in remaining
     ]
     avg_future = sum(future_norms) / len(future_norms)
