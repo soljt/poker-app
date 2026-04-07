@@ -374,3 +374,122 @@ class TestPotOdds:
         action, _ = engine.decide(state, call_fold)
         # Score ≈ 0.5 for trips; pot_odds_needed = 200/400 = 0.5; score just meets threshold
         assert action in ("call", "fold")  # borderline — either is acceptable
+
+
+# ---------------------------------------------------------------------------
+# Kicker-weight awareness
+# ---------------------------------------------------------------------------
+
+class TestKickerWeight:
+    """Pair of Aces should score strictly higher than pair of 2s on the same board."""
+
+    # Board with no 2s, 3s, 10s, Ks, or As — all test hole pairs stay as pairs.
+    BOARD = ["5 of hearts", "7 of spades", "8 of clubs", "Q of diamonds", "4 of hearts"]
+
+    def _score(self, hole: list[str]) -> float:
+        cards = [_parse_card(s) for s in hole]
+        board = [_parse_card(s) for s in self.BOARD]
+        return _current_strength(cards, board, kicker_weight=0.5)
+
+    def test_pair_of_aces_beats_pair_of_twos(self):
+        score_aces = self._score(["A of spades", "A of clubs"])
+        score_twos = self._score(["2 of spades", "2 of clubs"])
+        assert score_aces > score_twos
+
+    def test_pair_of_kings_beats_pair_of_threes(self):
+        score_kings = self._score(["K of spades", "K of clubs"])
+        score_threes = self._score(["3 of spades", "3 of clubs"])
+        assert score_kings > score_threes
+
+    def test_higher_pair_strictly_ordered(self):
+        # Ace-pair > King-pair > Ten-pair > Two-pair (all on the same neutral board)
+        ranks = [
+            ("A of spades", "A of clubs"),
+            ("K of spades", "K of clubs"),
+            ("10 of spades", "10 of clubs"),
+            ("2 of spades", "2 of clubs"),
+        ]
+        scores = [self._score(list(h)) for h in ranks]
+        assert scores == sorted(scores, reverse=True)
+
+    def test_kicker_weight_zero_makes_pairs_equal(self):
+        """With kicker_weight=0, all pairs collapse to the same score."""
+        board = [_parse_card(s) for s in self.BOARD]
+        score_aces = _current_strength(
+            [_parse_card("A of spades"), _parse_card("A of clubs")], board, kicker_weight=0.0
+        )
+        score_twos = _current_strength(
+            [_parse_card("2 of spades"), _parse_card("2 of clubs")], board, kicker_weight=0.0
+        )
+        assert score_aces == pytest.approx(score_twos)
+
+    def test_trips_still_beats_pair_of_aces(self):
+        """Even with max kicker bonus, a pair of aces must not outscore trips.
+        Board contains Q of diamonds; Q+Q hole cards make trips of Queens.
+        """
+        board = [_parse_card(s) for s in self.BOARD]
+        pair_aces = _current_strength(
+            [_parse_card("A of spades"), _parse_card("A of clubs")], board, kicker_weight=0.5
+        )
+        trips = _current_strength(
+            [_parse_card("Q of spades"), _parse_card("Q of clubs")], board, kicker_weight=0.5
+        )
+        assert trips > pair_aces
+
+    def test_score_still_bounded(self):
+        """kicker bonus must not push score above 1.0."""
+        board = [_parse_card(s) for s in self.BOARD]
+        score = _current_strength(
+            [_parse_card("A of spades"), _parse_card("A of clubs")], board, kicker_weight=1.0
+        )
+        assert score <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Hold vs aggression (default engine should hold pairs against moderate bets)
+# ---------------------------------------------------------------------------
+
+class TestHoldVsAggression:
+    """With default settings the bot should call moderate bets with a decent pair."""
+
+    # Pair of Kings on a dry board — no straight/flush danger
+    PAIR_KINGS_STATE_BASE = {
+        "my_cards": ["K of spades", "K of clubs"],
+        "board": ["2 of hearts", "7 of diamonds", "J of spades", "4 of clubs", "9 of hearts"],
+        "phase": "river",
+        "my_chips": 1000,
+        "my_bet": 0,
+    }
+
+    def _call_fold(self, bet: int, pot: int) -> tuple[str, dict]:
+        state = {
+            **self.PAIR_KINGS_STATE_BASE,
+            "table_bet": bet,
+            "pots": [{"amount": pot, "players": ["PokerBot", "alice"]}],
+        }
+        actions = [
+            {"action": "call", "min": None, "allin": False},
+            {"action": "fold", "min": None, "allin": False},
+            {"action": "raise", "min": None, "allin": False},
+        ]
+        return HeuristicDecisionEngine().decide(state, actions)
+
+    def test_calls_quarter_pot_bet(self):
+        """Bot should call a 1/4-pot bet with pair of Kings."""
+        action, _ = self._call_fold(bet=25, pot=100)
+        assert action == "call"
+
+    def test_calls_half_pot_bet(self):
+        """Bot should call a 1/4-pot bet with pair of Kings."""
+        action, _ = self._call_fold(bet=50, pot=100)
+        assert action == "call"
+
+    def test_calls_half_pot_bet(self):
+        """Bot should call a half-pot bet with pair of Kings."""
+        action, _ = self._call_fold(bet=50, pot=100)
+        assert action == "call"
+
+    def test_folds_massive_overbet(self):
+        """Bot should fold an absurd overbet (10x pot) with just a pair."""
+        action, _ = self._call_fold(bet=1000, pot=100)
+        assert action == "fold"
