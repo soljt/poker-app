@@ -182,10 +182,8 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         player = round.table.next_player(player)
         player.hole_cards = [Card("A", "spades"), Card("6", "hearts")]
 
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
-
-        self.assertEqual(round.rank_active_players(), [[round.table.btn, round.table.bb]])
+        ranked, _ = round.rank_active_players()
+        self.assertEqual(ranked, [[round.table.btn, round.table.bb]])
 
         round = PokerRound(['sol', 'kenna'], 50, 100)
         round.board = [Card("10", "hearts"), Card("Q", "spades"), Card("J", "spades"), Card("Q", "clubs"), Card("3", "clubs")]
@@ -194,10 +192,8 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         player = round.table.next_player(player)
         player.hole_cards = [Card("2", "spades"), Card("7", "diamonds")]
 
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
-            print(player.best_hand.hand_rank, ' | ', player.best_hand.card_ranks)
-        self.assertEqual(round.rank_active_players(), [[round.table.btn], [round.table.bb]])
+        ranked, _ = round.rank_active_players()
+        self.assertEqual(ranked, [[round.table.btn], [round.table.bb]])
 
     def test_folded_players(self):
         round = PokerRound(['sol', 'kenna', 'georg'], 50, 100)
@@ -210,10 +206,8 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         player = round.table.next_player(player)
         player.hole_cards = [Card("10", "spades"), Card("7", "hearts")]
 
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
-
-        self.assertEqual(round.rank_active_players(), [[round.table.bb], [round.table.sb]])
+        ranked, _ = round.rank_active_players()
+        self.assertEqual(ranked, [[round.table.bb], [round.table.sb]])
 
     def test_highest_pair_wins(self):
         sol = Player("Sol", 300)
@@ -226,10 +220,9 @@ class TestDetermineWinnerFunctions(unittest.TestCase):
         kenna.hole_cards = [Card("4", "clubs"), Card("9", "clubs")]
         louis.hole_cards = [Card("9", "diamonds"), Card("J", "diamonds")]
         beeps.hole_cards = [Card("8", "diamonds"), Card("Q", "hearts")]
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
-        self.assertEqual(round.rank_active_players(), [[louis], [sol], [beeps], [kenna]])
+        ranked, _ = round.rank_active_players()
+        self.assertEqual(ranked, [[louis], [sol], [beeps], [kenna]])
 
 class TestPots(unittest.TestCase):
     def test_multiple_rounds(self):
@@ -260,8 +253,8 @@ class TestPots(unittest.TestCase):
         round.pot.add_contribution(p5, p5.bet(15000))
         round.deal_board(1)
         round.deal_board(1)
-        winners = round.rank_active_players()
-        round.pot.award_pot(winners)
+        ranked, player_hands = round.rank_active_players()
+        round.pot.award_pot(ranked, player_hands=player_hands)
 
 class TestDetermineShowers(unittest.TestCase):
     def test_split_pot(self):
@@ -273,11 +266,8 @@ class TestDetermineShowers(unittest.TestCase):
         player = round.table.next_player(player)
         player.hole_cards = [Card("10", "clubs"), Card("3", "diamonds")]
 
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
-
-        ranked_active_players = round.rank_active_players()
-        pot_award_info, _ = round.pot.award_pot(ranked_active_players)
+        ranked_active_players, player_hands = round.rank_active_players()
+        pot_award_info, _ = round.pot.award_pot(ranked_active_players, player_hands=player_hands)
         self.assertEqual(set([entry["username"] for entry in round.determine_must_show_players(pot_award_info)]), set(["sol", "kenna"]))
 
     def test_allin_player_loss(self):
@@ -305,9 +295,6 @@ class TestDetermineShowers(unittest.TestCase):
             i += 1
         round.board = [Card("6", "hearts"), Card("K", "diamonds"), Card("Q", "hearts"), Card("6", "clubs"), Card("5", "clubs")]
 
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
-
         pot_award_info = round.end_poker_round()
         must_show = round.determine_must_show_players(pot_award_info)
         self.assertEqual(set([entry["username"] for entry in must_show]), set(["soljt"]))
@@ -331,9 +318,6 @@ class TestShowWinningHand(unittest.TestCase):
         round.apply_player_action(p2, "call", 900)
         round.apply_player_action(p3, "call", 900)
         round.apply_player_action(p3, "fold", None)
-
-        for player in round.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + round.board)
 
         round.is_action_finished = True
         round.is_poker_round_over = True
@@ -387,6 +371,19 @@ class TestBugs(unittest.TestCase):
                 i += 1
         pot_award_info = round.end_poker_round()
         self.assertEqual(i, 0)
+
+    def test_open_fold_preflop(self):
+        """Regression: player folding preflop must not raise NoneType on end_poker_round."""
+        p1 = Player("P1", 1000)
+        p2 = Player("P2", 1000)
+        round = PokerRound([p1, p2], 50, 100)
+        round.start_round()
+        player_to_act = round.get_player_to_act_and_actions()["player_to_act"]
+        round.handle_player_action(player_to_act, "fold", None)
+        self.assertTrue(round.is_poker_round_over)
+        pot_award_info = round.end_poker_round()  # must not raise
+        self.assertEqual(len(pot_award_info), 1)
+        self.assertEqual(pot_award_info[0]["hand_rank"], "By Default")
 
     def test_allin_player_last_to_act(self):
         p1 = Player("brian", 1000)

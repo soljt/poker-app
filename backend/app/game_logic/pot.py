@@ -39,6 +39,7 @@ class Pot:
         self,
         ranked_active_players: List[List[Player]],
         active_players: set = set(),
+        player_hands: dict = {},
     ) -> tuple[dict, dict]:
         """
         Award this pot to the best-handed eligible player(s).
@@ -66,7 +67,7 @@ class Pot:
 
         pot_players = set(self.player_contributions)
         must_show = len(pot_players.intersection(active_players)) != 1
-        hand_rank = winners[0].best_hand.hand_rank.label if must_show else "By Default"
+        hand_rank = player_hands[winners[0]].hand_rank.label if must_show else "By Default"
 
         award_info = {
             "winners": [w.name for w in winners],
@@ -158,6 +159,7 @@ class PotCollection:
         self,
         ranked_active_players: List[List[Player]],
         active_players: set = set(),
+        player_hands: dict = {},
     ) -> tuple[list, dict]:
         """
         Award all pots. Returns (pot_award_info_list, aggregated_chip_changes).
@@ -168,7 +170,7 @@ class PotCollection:
         all_chip_changes: dict = {}
         pot = self.main_pot
         while pot:
-            info, chip_changes = pot.award_pot(ranked_active_players, active_players)
+            info, chip_changes = pot.award_pot(ranked_active_players, active_players, player_hands)
             pot_award_info.append(info)
             for player, amount in chip_changes.items():
                 all_chip_changes[player] = all_chip_changes.get(player, 0) + amount

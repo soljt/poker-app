@@ -1,6 +1,5 @@
 from __future__ import annotations
-from types import NoneType
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 from app.game_logic.exceptions import (
     InvalidActionError,
@@ -174,8 +173,8 @@ class PokerRound:
         if not self.is_poker_round_over:
             self.deal_board(5 - len(self.board))
 
-        ranked_active_players = self.rank_active_players()
-        pot_award_info, chip_changes = self.pot.award_pot(ranked_active_players, self.active_players)
+        ranked_active_players, player_hands = self.rank_active_players()
+        pot_award_info, chip_changes = self.pot.award_pot(ranked_active_players, self.active_players, player_hands)
         for player, amount in chip_changes.items():
             player.chips += amount
         return pot_award_info
@@ -343,20 +342,28 @@ class PokerRound:
                     {"action": Action.BET, "min": minimum, "allin": False},
                 ]
 
-    def rank_active_players(self) -> List[List[Player]]:
+    def rank_active_players(self) -> Tuple[List[List[Player]], Dict[Player, Hand]]:
         """
         Rank active players by hand strength, grouping ties.
-        Returns [[strongest], [next], ...] ordered strongest-first.
+        Returns (ranked_groups, player_hands):
+          - ranked_groups: [[strongest], [next], ...] strongest-first
+          - player_hands: maps each non-folded Player to their best Hand
         """
+        player_hands: Dict[Player, Hand] = {
+            p: best_hand_from_cards(p.hole_cards + self.board)
+            for p in self.table._seats if not p.folded
+        }
+
         ranked: List[List[Player]] = []
         for player in self.table._seats:
             if player.folded:
                 continue
+            hand = player_hands[player]
             for i, group in enumerate(ranked):
-                if player.best_hand > group[0].best_hand:
+                if hand > player_hands[group[0]]:
                     ranked.insert(i, [player])
                     break
-                elif player.best_hand == group[0].best_hand:
+                elif hand == player_hands[group[0]]:
                     group.append(player)
                     break
             else:
@@ -364,18 +371,16 @@ class PokerRound:
 
         print(f"RANKING: {ranked}")
         print(f"BOARD: {self.board}")
-        for player in self.table._seats:
-            print(f"{player.name} makes {player.best_hand.hand_rank.label} from {player.hole_cards}")
+        for player, hand in player_hands.items():
+            print(f"{player.name} makes {hand.hand_rank.label} from {player.hole_cards}")
 
-        return ranked
+        return ranked, player_hands
 
     # ── board / hands ────────────────────────────────────────────────────────
 
     def deal_board(self, num_cards: int) -> None:
-        """Deal cards to the board and update every player's best hand."""
+        """Deal cards to the board."""
         self.board += self.deck.deal(num_cards)
-        for player in self.table._seats:
-            player.best_hand = best_hand_from_cards(player.hole_cards + self.board)
         print(f"\n\nBOARD: {self.board}\n\n")
         print(f"POT: {self.pot}")
 

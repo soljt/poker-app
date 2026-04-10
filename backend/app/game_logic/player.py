@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.game_logic.card import Card
-    from app.game_logic.hand import Hand
 
 
 class Player:
@@ -11,7 +10,6 @@ class Player:
         self.name = name
         self.chips = chips
         self.hole_cards: List[Card] = []
-        self.best_hand: Optional[Hand] = None
         self.current_bet = 0
         self.playing = True
         self.folded = False
@@ -38,7 +36,6 @@ class Player:
         self.current_bet = 0
         self.folded = False
         self.allin = False
-        self.best_hand = None
         self.hole_cards = []
 
     def __repr__(self) -> str:
