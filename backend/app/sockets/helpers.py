@@ -1,7 +1,7 @@
 from app.extensions import socketio
 from app.db import db
 from app.models.user import User
-from app.game_logic.game_logic import Player, PokerRound
+from app.game_logic import Player, PokerRound
 import app.state as state
 from app.recording.game_recorder import recorder
 

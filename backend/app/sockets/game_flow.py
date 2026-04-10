@@ -3,7 +3,7 @@ import time
 from flask import current_app
 from app.extensions import socketio
 from app.sockets.helpers import create_and_fund_players, create_player_object, get_user_bankroll, update_player_chips, delete_game, cashout_player, remove_user_from_game
-from app.game_logic.game_logic import PokerRound
+from app.game_logic import PokerRound
 from app.timer.inaction_timer import InactionTimer
 import app.state as state
 from app.globals import StatusEnum

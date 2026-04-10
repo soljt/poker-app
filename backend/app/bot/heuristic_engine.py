@@ -10,7 +10,7 @@ implementation logic.
 """
 
 from app.bot.decision_engine import DecisionEngine
-from app.game_logic.game_logic import Card, best_hand_from_cards
+from app.game_logic import Card, best_hand_from_cards
 import math
 
 DEFAULT_PHASE_ALPHA = {"flop": 0.4, "turn": 0.7, "river": 1.0}
