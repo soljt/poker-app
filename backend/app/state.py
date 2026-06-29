@@ -1,6 +1,6 @@
 from app.globals import StatusEnum, games
 from app.globals import player_timers, connected_users, user_sids
-from app.game_logic.game_logic import PokerRound
+from app.game_logic import PokerRound
 from app.timer.inaction_timer import InactionTimer
 
 def check_game_id(game_id: str) -> bool:

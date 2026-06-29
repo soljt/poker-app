@@ -3,7 +3,8 @@
     "allow": [
       "Bash(xargs grep:*)",
       "Bash(source poker-env/Scripts/activate)",
-      "Bash(pytest -q)"
+      "Bash(pytest -q)",
+      "Bash(python -m pytest -q)"
     ]
   }
 }

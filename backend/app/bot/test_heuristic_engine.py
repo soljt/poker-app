@@ -10,7 +10,7 @@ from app.bot.heuristic_engine import (
     _current_strength,
     _potential,
 )
-from app.game_logic.game_logic import Card, best_hand_from_cards
+from app.game_logic import Card, best_hand_from_cards
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

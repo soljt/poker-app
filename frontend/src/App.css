@@ -1,5 +1,31 @@
 html {
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  /* Firefox */
+  scrollbar-color: #c1c1c1 var(--bs-tertiary-bg);
+}
+
+/* Chromium / Safari */
+::-webkit-scrollbar {
+  width: 15px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bs-tertiary-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 8px;
+  border: 3px solid var(--bs-tertiary-bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Remove up/down arrow buttons */
+::-webkit-scrollbar-button {
+  display: none;
 }
 
 .big-handmade-hearts-bg {

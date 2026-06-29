@@ -1,5 +1,5 @@
 from app.bot.decision_engine import DecisionEngine
-from app.game_logic.game_logic import PokerRound
+from app.game_logic import PokerRound
 
 
 class PokerBot:
