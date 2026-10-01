@@ -5,11 +5,14 @@ from flask_jwt_extended import (
 from datetime import datetime, timedelta, timezone
 from app.models.user import User
 from app.extensions import jwt
+from app.auth.demo import demo_leases
 
 # Using an `after_request` callback, we refresh any token that is within 30
 # minutes of expiring.
 def refresh_expiring_jwts(response):
     try:
+        if "lease_id" in get_jwt():
+            return response  # demo sessions end with their lease, never refresh them
         exp_timestamp = get_jwt()["exp"]
         now = datetime.now(timezone.utc)
         target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
@@ -39,3 +42,17 @@ def user_identity_lookup(user):
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(id=identity).one_or_none()
+
+
+# Demo tokens carry a lease_id - once the seat has been handed to someone else
+# (or the lease ran out), treat the token as revoked. Valid requests count as activity.
+@jwt.token_in_blocklist_loader
+def check_demo_lease(_jwt_header, jwt_payload):
+    lease_id = jwt_payload.get("lease_id")
+    if not lease_id:
+        return False
+    user = User.query.filter_by(id=jwt_payload["sub"]).one_or_none()
+    if not user or not demo_leases.is_valid(user.username, lease_id):
+        return True
+    demo_leases.touch(user.username)
+    return False

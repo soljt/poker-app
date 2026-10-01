@@ -6,6 +6,7 @@ from flask_jwt_extended import decode_token
 from app.models.user import User
 from app.db import db
 import app.state as state
+from app.auth.demo import demo_leases
 
 @socketio.on("connect")
 def connect_handler(auth):
@@ -17,6 +18,9 @@ def connect_handler(auth):
         decoded = decode_token(request.cookies["access_token_cookie"], request.cookies["csrf_access_token"])   
         user_id = decoded["sub"]
         username = db.session.execute(db.select(User).filter_by(id=user_id)).scalar_one_or_none().username   
+        if "lease_id" in decoded and not demo_leases.is_valid(username, decoded["lease_id"]):
+            print(f"stale demo lease for {username}")
+            return False
         print(f"connected successfully with {request.sid}")
         print(f"from global_events.py: {request.sid} joined room: {username}")
         join_room(username)

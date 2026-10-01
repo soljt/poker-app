@@ -172,3 +172,5 @@ def get_user_sid(username: str) -> str:
 
 def set_user_sid(username: str, sid: str):
     user_sids[username] = sid
+def delete_user_sid(username: str):
+    user_sids.pop(username, None)

@@ -3,6 +3,7 @@ from flask_socketio import emit, join_room, leave_room
 from app.extensions import socketio
 from app.sockets.helpers import delete_game, get_user_role
 import app.state as state
+from app.auth.demo import demo_leases
 from app.sockets.lobby_flow import create_game, get_game_info, join_game, leave_game, reconnect_to_game, validate_create_game, validate_join_game, validate_leave_game, validate_reconnect_to_game, add_bot_to_game
 from app.models.user import RoleEnum
 
@@ -10,6 +11,7 @@ from app.models.user import RoleEnum
 def handle_join(data):
     """Handles when a user joins the game by submitting their username and adding them to active users/game room"""
     username, connected_game_id = state.get_connected_user(request.sid) # user must be in this dict due to connecting
+    demo_leases.touch(username)
     game_id = data.get("game_id")
     
     if not validate_join_game(game_id, connected_game_id, username):
@@ -52,6 +54,7 @@ def handle_leave(data):
 @socketio.on("create_game")
 def handle_create_game(data):
     username, _ = state.get_connected_user(request.sid)
+    demo_leases.touch(username)
     game_id = f"game_{username}"
 
     val = validate_create_game(game_id, username, data["buy_in"], data["small_blind"], data["big_blind"])
@@ -76,6 +79,7 @@ def handle_delete_game(data):
 @socketio.on("add_bot")
 def handle_add_bot(data):
     username, _ = state.get_connected_user(request.sid)
+    demo_leases.touch(username)
     game_id = data.get("game_id")
     if not state.check_game_id(game_id) or state.get_host(game_id) != username:
         emit("error", {"message": "Only the host can add a bot."})

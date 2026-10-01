@@ -2,6 +2,7 @@ from flask import jsonify, request
 from sqlalchemy import case
 from app.db import db
 from app.models.user import User
+from app.auth.demo import DEMO_USERNAMES
 from app.extensions import limiter, cache
 from app.leaderboard import leaderboard
 
@@ -14,7 +15,7 @@ def fetch_leaderboard():
         (User.username == 'PokerBot', User.chips - 10000000),
         else_=User.chips - 5000
     )
-    rows = db.session.execute(db.select(User.username, balance).order_by(balance.desc()).limit(10))
+    rows = db.session.execute(db.select(User.username, balance).where(User.username.not_in(DEMO_USERNAMES)).order_by(balance.desc()).limit(10))
     users = [{"username": row[0],
               "balance": row[1]} for row in rows]
     return jsonify({
