@@ -89,11 +89,15 @@ def verify_turnstile(token: str | None, remote_ip: str | None) -> bool:
             return False
         secret = TURNSTILE_TEST_SECRET
     if not token:
+        print("turnstile: no token in demo request")
         return False
     data = parse.urlencode({"secret": secret, "response": token, "remoteip": remote_ip or ""}).encode()
     try:
         with request.urlopen(TURNSTILE_VERIFY_URL, data=data, timeout=5) as resp:
-            return bool(json.load(resp).get("success"))
+            result = json.load(resp)
+        if not result.get("success"):
+            print(f"turnstile rejected token: {result.get('error-codes')}")
+        return bool(result.get("success"))
     except Exception as e:
         print(f"turnstile verification failed: {e}")
         return False

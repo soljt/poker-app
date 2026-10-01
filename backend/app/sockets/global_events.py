@@ -58,7 +58,7 @@ def disconnect_handler(reason):
     try:
         username, room = state.get_connected_user(request.sid)
 
-        if reason not in [SocketIO.reason.TRANSPORT_CLOSE, SocketIO.reason.TRANSPORT_ERROR] and username not in state.get_players(room):
+        if reason not in [SocketIO.reason.TRANSPORT_CLOSE, SocketIO.reason.TRANSPORT_ERROR] and username not in (state.get_players(room) or []):
             state.delete_connected_user(request.sid)
 
         # TODO: handle disconnection from active game...remove the player? what
