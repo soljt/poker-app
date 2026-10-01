@@ -50,7 +50,7 @@ class InactionTimer:
     def _emit_countdown(self):
         seconds_left = self.delay
         while seconds_left >= 0 and not self.cancel_event.is_set():
-            self.socketio.emit("kick_countdown", {"seconds": seconds_left}, to=self.username)
+            self.socketio.emit("kick_countdown", {"seconds": seconds_left, "username": self.username}, to=self.game_id)
             time.sleep(1)
             seconds_left -= 1
 

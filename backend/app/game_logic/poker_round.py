@@ -44,6 +44,7 @@ class PokerRound:
         self.allin_players: set = set()
         self.pot = PotCollection()
 
+        self.last_action: dict | None = None
         self.current_player: Player = None
         self.last_to_act: Player = None
         self.is_betting_round_over = False
@@ -115,6 +116,7 @@ class PokerRound:
             "table_bet": self.current_bet,
             "my_chips": player.chips,
             "phase": self.phase,
+            "last_action": self.last_action,
         }
 
     # ── round lifecycle ──────────────────────────────────────────────────────
@@ -161,6 +163,9 @@ class PokerRound:
             return
 
         self.is_betting_round_over = False
+        for player in self.table._seats:
+            if not player.folded:
+                player.last_action = None
         self.current_player, self.last_to_act = self.get_betting_order(preflop=False)
 
     def end_poker_round(self) -> List[dict]:
@@ -238,6 +243,12 @@ class PokerRound:
             while self.last_to_act.folded or self.last_to_act.allin:
                 self.last_to_act = self.table.prev_player(self.last_to_act)
 
+        player.last_action = {
+            "action": action,
+            "amount": player.current_bet if action != Action.FOLD else None,
+            "allin": player.allin,
+        }
+        self.last_action = {"username": player.name, **player.last_action}
         print(f"{player.name} now has {player.chips} and is in for {player.current_bet}. All in? {player.allin}")
 
     def update_game_state(self) -> None:

@@ -2,6 +2,7 @@ import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { PokerGameProps } from "../types";
 import PlayingCard from "./PlayingCard";
+import { formatLastAction } from "../helpers/formatAction";
 
 const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
   const {
@@ -45,6 +46,10 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
                     key={index}
                     className={`list-group-item d-flex justify-content-between align-items-center ${
                       player.folded ? "opacity-50" : ""
+                    } ${
+                      player.username === player_to_act
+                        ? "list-group-item-warning"
+                        : ""
                     }`}
                   >
                     <div>
@@ -54,6 +59,11 @@ const PokerGamePage: React.FC<PokerGameProps> = ({ gameData }) => {
                       </div>
                     </div>
                     <span>
+                      {player.last_action && (
+                        <span className="badge bg-light text-dark border me-1">
+                          {formatLastAction(player.last_action)}
+                        </span>
+                      )}
                       {player.username === small_blind_player && (
                         <span className="badge bg-primary me-1">SB</span>
                       )}

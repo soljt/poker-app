@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Button, Form } from "react-bootstrap";
+import { LastAction } from "../types";
+import { describeLastAction } from "../helpers/formatAction";
 
 export interface ActionItem {
   action: string;
@@ -16,6 +18,7 @@ type PlayerActionPanelProps = {
   fixedPosition?: boolean;
   tableCurrentBet: number;
   playerCurrentBet: number;
+  lastAction?: (LastAction & { username: string }) | null;
 };
 
 const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
@@ -27,6 +30,7 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
   fixedPosition,
   tableCurrentBet,
   playerCurrentBet,
+  lastAction,
 }) => {
   const [customAmount, setCustomAmount] = useState<number | null>(null);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
@@ -96,6 +100,11 @@ const PlayerActionPanel: React.FC<PlayerActionPanelProps> = ({
       style={{ zIndex: 1050, minWidth: "300px" }}
     >
       <div className="text-center mb-3">
+        {lastAction && (
+          <div className="text-muted small mb-1">
+            {describeLastAction(lastAction.username, lastAction)}
+          </div>
+        )}
         <h5 className="fw-semibold mb-2">Your Turn</h5>
 
         {/* Compact Bet Info Card */}

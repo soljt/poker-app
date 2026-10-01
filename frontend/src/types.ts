@@ -13,13 +13,21 @@ export interface GameData {
   my_chips: number;
   my_wallet: bigint;
   phase: string;
+  last_action?: (LastAction & { username: string }) | null;
+}
+
+export interface LastAction {
+  action: string;
+  amount: number | null;
+  allin: boolean;
 }
 
 export interface GamePlayer {
   username: string,
   chips: number,
   folded: boolean,
-  current_bet: number
+  current_bet: number,
+  last_action?: LastAction | null
 }
 
 export interface GameParams {

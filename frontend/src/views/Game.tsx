@@ -4,6 +4,7 @@ import { handleError } from "../helpers/ErrorHandler";
 import { toast } from "react-toastify";
 import PokerGamePage from "../components/PokerGamePage";
 import PlayerActionPanel from "../components/PlayerActionPanel";
+import WaitingPanel from "../components/WaitingPanel";
 import RoundOverOverlay from "../components/NewRoundOverOverlay";
 import { GameData, PlayerTurnData, ActionItem, PotAwardItem } from "../types";
 import { useAuth } from "../context/useAuth";
@@ -21,6 +22,7 @@ const Game = () => {
   const [showRoundOver, setShowRoundOver] = useState(false);
   const [countDownTimer, setCountDownTimer] = useState(999);
   const [kickTimer, setKickTimer] = useState(999);
+  const [kickTimerUser, setKickTimerUser] = useState("");
   const [potAwards, setPotAwards] = useState<PotAwardItem[]>([]);
   const [host, setHost] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -98,6 +100,7 @@ const Game = () => {
     });
     socket.on("kick_countdown", (data) => {
       setKickTimer(data.seconds);
+      setKickTimerUser(data.username);
     });
     socket.on("game_deleted", (game) => {
       if (localStorage.getItem("game_id") === game.game_id) {
@@ -113,6 +116,17 @@ const Game = () => {
       socket.off("kick_countdown");
     };
   }, [socket, navigate]);
+
+  const isMyTurn =
+    !!user && !!gameData && gameData.player_to_act === user.username;
+
+  useEffect(() => {
+    const baseTitle = "poker.soljt.ch";
+    document.title = isMyTurn ? `● Your turn – ${baseTitle}` : baseTitle;
+    return () => {
+      document.title = baseTitle;
+    };
+  }, [isMyTurn]);
 
   const handleOpenConfirm = (type: "leave" | "end") => {
     setActionType(type);
@@ -250,37 +264,45 @@ const Game = () => {
           hasBotInGame={gameData.players.some((p) => p.username === "PokerBot")}
           onRevealBotHand={handleRevealBotHand}
         />
+      ) : user?.username === playerToAct && gameData ? (
+        <PlayerActionPanel
+          small_blind={gameData.blinds[0]}
+          pot={gameData.pots.reduce(
+            (sum, entry) => (sum = sum + entry.amount),
+            0
+          )}
+          timeToKick={kickTimer}
+          availableActions={
+            actionList || [{ action: "Nothing", min: 0, allin: false }]
+          }
+          onActionSelect={(action: string, amount?: number) => {
+            socket.emit("player_action", {
+              player: user.username,
+              action: action,
+              amount: amount ?? null,
+            });
+            console.log(
+              "sent to backend...player:",
+              user.username,
+              "action:",
+              action,
+              "amount:",
+              amount ?? null
+            );
+          }}
+          fixedPosition={true}
+          tableCurrentBet={gameData.table_bet}
+          playerCurrentBet={gameData.my_bet}
+          lastAction={gameData.last_action}
+        />
       ) : (
-        user?.username === playerToAct &&
-        gameData && (
-          <PlayerActionPanel
-            small_blind={gameData.blinds[0]}
-            pot={gameData.pots.reduce(
-              (sum, entry) => (sum = sum + entry.amount),
-              0
-            )}
-            timeToKick={kickTimer}
-            availableActions={
-              actionList || [{ action: "Nothing", min: 0, allin: false }]
+        gameData?.player_to_act && (
+          <WaitingPanel
+            playerToAct={gameData.player_to_act}
+            timeToKick={
+              kickTimerUser === gameData.player_to_act ? kickTimer : null
             }
-            onActionSelect={(action: string, amount?: number) => {
-              socket.emit("player_action", {
-                player: user.username,
-                action: action,
-                amount: amount ?? null,
-              });
-              console.log(
-                "sent to backend...player:",
-                user.username,
-                "action:",
-                action,
-                "amount:",
-                amount ?? null
-              );
-            }}
-            fixedPosition={true}
-            tableCurrentBet={gameData.table_bet}
-            playerCurrentBet={gameData.my_bet}
+            lastAction={gameData.last_action}
           />
         )
       )}

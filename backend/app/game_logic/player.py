@@ -14,6 +14,7 @@ class Player:
         self.playing = True
         self.folded = False
         self.allin = False
+        self.last_action: dict | None = None
 
     def bet(self, amount: int) -> int:
         """
@@ -36,6 +37,7 @@ class Player:
         self.current_bet = 0
         self.folded = False
         self.allin = False
+        self.last_action = None
         self.hole_cards = []
 
     def __repr__(self) -> str:
