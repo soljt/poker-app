@@ -3,6 +3,10 @@ FROM dhi.io/node:25.8-debian13-dev AS build
 WORKDIR /app
 COPY . .
 
+# public site key, baked in at build time
+ARG VITE_TURNSTILE_SITE_KEY
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+
 RUN npm install
 RUN npm run build
 

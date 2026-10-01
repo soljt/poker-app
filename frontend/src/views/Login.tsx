@@ -6,10 +6,11 @@ import { handleError } from "../helpers/ErrorHandler";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isLoggedIn, loginUser } = useAuth();
+  const { isLoggedIn, loginUser, loginDemoUser } = useAuth();
   const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -34,6 +35,12 @@ export default function Login() {
     } catch (error: unknown) {
       handleError(error);
     }
+  };
+
+  const handleDemoLogin = async () => {
+    setDemoLoading(true);
+    await loginDemoUser();
+    setDemoLoading(false);
   };
 
   return (
@@ -71,12 +78,14 @@ export default function Login() {
         <button type="submit" className="btn btn-primary">
           LOG IN
         </button>
-        <p>
-          <br />
-          Demo User: <br />
-          Username: hotbrian <br />
-          Password: password12345
-        </p>
+        <button
+          type="button"
+          className="btn btn-outline-secondary ms-2"
+          disabled={demoLoading}
+          onClick={handleDemoLogin}
+        >
+          {demoLoading ? "FINDING A SEAT..." : "TRY AS DEMO USER"}
+        </button>
       </form>
       <p style={{ marginTop: "2vh" }}>
         Don't have an account? Too bad. Ask Sol to make you one.

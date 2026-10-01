@@ -9,7 +9,13 @@ import { User } from "../models/User";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import React from "react";
-import { loginAPI, logoutAPI, registerAPI } from "../services/AuthService";
+import {
+  demoLoginAPI,
+  loginAPI,
+  logoutAPI,
+  registerAPI,
+} from "../services/AuthService";
+import { getTurnstileToken } from "../services/turnstile";
 import {
   admin_api,
   auth_api,
@@ -24,6 +30,7 @@ type UserContextType = {
   token: string | null;
   registerUser: (username: string, password: string) => void;
   loginUser: (username: string, password: string) => void;
+  loginDemoUser: () => Promise<void>;
   logout: () => void;
   isLoggedIn: () => boolean;
   refreshUser: () => void;
@@ -97,23 +104,42 @@ export const UserProvider = ({ children }: Props) => {
       fetchMe();
     };
 
+    // once the backend has set the cookies, pick up the csrf token and fetch the user
+    const finishLogin = async () => {
+      const token = getCookie("csrf_access_token");
+      setToken(token ? token : null);
+      auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+      game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
+
+      const res = await auth_api.post("/who_am_i", {});
+      // localStorage.setItem("user", JSON.stringify(res.data.user));
+      setUser(res.data.user);
+      toast.success(res.data.message);
+    };
+
     // login the user
     const loginUser = async (username: string, password: string) => {
       await loginAPI(username, password)
         .then(async (res) => {
           if (res) {
-            const token = getCookie("csrf_access_token");
-            setToken(token ? token : null);
-            auth_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-            game_api.defaults.headers.common["X-CSRF-TOKEN"] = token;
-
-            const res = await auth_api.post("/who_am_i", {});
-            // localStorage.setItem("user", JSON.stringify(res.data.user));
-            setUser(res.data.user);
-            toast.success(res.data.message);
+            await finishLogin();
           }
         })
         .catch((e) => toast.warning("Server error occurred", e));
+    };
+
+    // grab a free demo account
+    const loginDemoUser = async () => {
+      try {
+        const turnstileToken = await getTurnstileToken();
+        const res = await demoLoginAPI(turnstileToken);
+        if (res) {
+          await finishLogin();
+          toast.success(res.data.message);
+        }
+      } catch {
+        toast.warning("Couldn't start a demo session - try again");
+      }
     };
 
     const isLoggedIn = () => {
@@ -134,6 +160,7 @@ export const UserProvider = ({ children }: Props) => {
       token,
       registerUser,
       loginUser,
+      loginDemoUser,
       logout,
       isLoggedIn,
       refreshUser,
