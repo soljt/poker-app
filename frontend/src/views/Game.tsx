@@ -293,6 +293,7 @@ const Game = () => {
           fixedPosition={true}
           tableCurrentBet={gameData.table_bet}
           playerCurrentBet={gameData.my_bet}
+          lastAction={gameData.last_action}
         />
       ) : (
         gameData?.player_to_act && (
