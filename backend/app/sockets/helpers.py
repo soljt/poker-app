@@ -3,6 +3,7 @@ from app.db import db
 from app.models.user import User
 from app.game_logic import Player, PokerRound
 import app.state as state
+from app.auth.demo import demo_leases
 from app.recording.game_recorder import recorder
 
 class UserValidationError(Exception):
@@ -14,6 +15,7 @@ def validate_player(request):
     username, game_id = state.get_connected_user(request.sid)
     if not (username and game_id):
         raise UserValidationError
+    demo_leases.touch(username)
     return username, game_id
 
 def cashout_all_players(game_id: str) -> None:
@@ -106,3 +108,28 @@ def create_player_object(username: str, chips: int = -1) -> Player:
     new_player = Player(username, chips) if chips != -1 else Player(username, user.chips)
     return new_player
                 
+def is_in_started_game(username: str) -> bool:
+    return any(
+        state.get_game(game_id) and username in state.get_players(game_id)
+        for game_id in state.get_game_ids()
+    )
+
+# used when a demo seat changes hands - only called for users not in a started game
+def evict_user(username: str) -> None:
+    for game_id in state.get_game_ids():
+        if username in state.get_joiner_queue(game_id):
+            state.remove_from_joiner_queue(game_id, username)
+            socketio.emit("player_dequeued", {"game_id": game_id, "username": username})
+        if state.get_game(game_id):
+            continue
+        if state.get_host(game_id) == username:
+            delete_game(game_id)
+        elif username in state.get_players(game_id):
+            state.remove_from_players(game_id, username)
+            socketio.emit("player_left", {"game_id": game_id, "username": username})
+
+    sid = state.get_user_sid(username)
+    if sid:
+        socketio.server.disconnect(sid, namespace="/")
+        state.delete_connected_user(sid)
+        state.delete_user_sid(username)

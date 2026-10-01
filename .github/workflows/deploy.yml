@@ -56,6 +56,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            VITE_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
           tags: |
             ${{ env.IMAGE_PREFIX }}/poker-frontend:latest
             ${{ env.IMAGE_PREFIX }}/poker-frontend:${{ github.sha }}

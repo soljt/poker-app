@@ -10,6 +10,15 @@ export const loginAPI = async (username: string, password: string) => {
     }
 };
 
+export const demoLoginAPI = async (turnstileToken: string) => {
+    try {
+        const data = await auth_api.post("/demo", {turnstile_token: turnstileToken});
+        return data;
+    } catch (error) {
+        handleError(error);
+    }
+};
+
 export const logoutAPI = async () => {
     try {
         const data = await auth_api.post("/logout");

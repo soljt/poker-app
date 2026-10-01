@@ -1,7 +1,10 @@
 from sqlite3 import IntegrityError
 from app.auth import auth
+from app.auth.demo import DEMO_CHIPS, AllSeatsBusyError, demo_leases, is_demo_username, verify_turnstile
 from app.db import db
+from app.extensions import limiter
 from app.models.user import User
+from app.sockets.helpers import evict_user, is_in_started_game
 from flask import (
     request,
     jsonify,
@@ -9,9 +12,11 @@ from flask import (
 from flask_jwt_extended import (
     create_access_token, 
     current_user, 
+    get_jwt,
     jwt_required, 
     set_access_cookies, 
-    unset_jwt_cookies
+    unset_jwt_cookies,
+    verify_jwt_in_request
 )
 
 @auth.route("/login", methods=["POST"])
@@ -33,8 +38,38 @@ def login():
         return jsonify({"error": "server-side"}), 500
     return response
 
+@auth.route("/demo", methods=["POST"])
+@limiter.limit("10 per hour")
+def demo_login():
+    data = request.json or {}
+    if not verify_turnstile(data.get("turnstile_token"), request.remote_addr):
+        return jsonify({"error": "Couldn't verify you're human - try again"}), 403
+    try:
+        lease = demo_leases.claim(is_busy=is_in_started_game)
+    except AllSeatsBusyError as e:
+        minutes = max(e.retry_after // 60, 1)
+        return jsonify({"error": f"All demo seats are in use - try again in ~{minutes} min, or register (takes 10 seconds)"}), 503
+
+    # whoever had this seat before is gone - clear them out and reset the chips
+    evict_user(lease.username)
+    user = db.session.execute(db.select(User).filter_by(username=lease.username)).scalar_one()
+    user.chips = DEMO_CHIPS
+    db.session.commit()
+
+    access_token = create_access_token(identity=user, additional_claims={"lease_id": lease.lease_id})
+    response = jsonify({"message": f"Logged in as {user.username}"})
+    set_access_cookies(response, access_token)
+    return response
+
 @auth.route("/logout", methods=["POST"])
 def logout():
+    try:
+        verify_jwt_in_request(optional=True)
+        lease_id = get_jwt().get("lease_id")
+        if lease_id:
+            demo_leases.release(current_user.username, lease_id)
+    except Exception:
+        pass
     response = jsonify({"message": "Logout successful from backend"})
     unset_jwt_cookies(response)
     return response
@@ -42,6 +77,8 @@ def logout():
 @auth.route("/register", methods=["POST"])
 def register():
     data = request.json
+    if is_demo_username(data["username"]):
+        return jsonify({"error": "Username taken"}), 500
     new_usr = User(username=data["username"], chips=5000, password=data["password"]) 
     try:
         db.session.add(new_usr)

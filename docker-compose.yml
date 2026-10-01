@@ -14,6 +14,7 @@ services:
       - CACHE_REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - POKER_BOT_PASSWORD=${POKER_BOT_PASSWORD}
+      - TURNSTILE_SECRET=${TURNSTILE_SECRET}
     # no volume needed for hot reload (on prod)
     volumes:
       - ./recorded_game_data:/app/game_data
