@@ -406,5 +406,59 @@ class TestBugs(unittest.TestCase):
                 i += 1
         self.assertEqual(round.phase, "flop")
 
+class TestLastAction(unittest.TestCase):
+
+    def setUp(self):
+        self.p1 = Player("P1", 1000)
+        self.p2 = Player("P2", 1000)
+        self.p3 = Player("P3", 1000)
+        self.round = PokerRound([self.p1, self.p2, self.p3], 10, 20)
+        self.round.start_round()
+
+    def act(self, action, amount=None):
+        name = self.round.get_player_to_act_and_actions()["player_to_act"]
+        self.round.handle_player_action(name, action, amount)
+        return self.round.get_player(name)
+
+    def test_no_actions_after_blinds(self):
+        self.assertIsNone(self.round.last_action)
+        for p in (self.p1, self.p2, self.p3):
+            self.assertIsNone(p.last_action)
+
+    def test_action_recorded(self):
+        raiser = self.act("raise", 60)
+        self.assertEqual(raiser.last_action, {"action": "raise", "amount": 60, "allin": False})
+        self.assertEqual(self.round.last_action["username"], raiser.name)
+        caller = self.act("call")
+        self.assertEqual(caller.last_action["amount"], 60)
+
+    def test_cleared_on_new_street_except_fold(self):
+        folder = self.act("fold")
+        caller = self.act("call")
+        checker = self.act("check")
+        self.assertEqual(self.round.phase, "flop")
+        self.assertEqual(folder.last_action["action"], "fold")
+        self.assertIsNone(caller.last_action)
+        self.assertIsNone(checker.last_action)
+        self.assertEqual(self.round.last_action["username"], checker.name)
+
+    def test_allin_flag(self):
+        shover = self.act("raise", 1000)
+        self.assertTrue(shover.last_action["allin"])
+
+    def test_serialized(self):
+        actor = self.act("call")
+        info = {p["username"]: p for p in self.round.serialize_for_player("P1")["players"]}
+        self.assertEqual(info[actor.name]["last_action"]["action"], "call")
+
+    def test_reset_next_round(self):
+        self.act("fold")
+        self.act("fold")
+        self.round.end_poker_round()
+        self.round.start_next_round()
+        self.assertIsNone(self.round.last_action)
+        for p in (self.p1, self.p2, self.p3):
+            self.assertIsNone(p.last_action)
+
 if __name__ == "__main__":
     unittest.main()

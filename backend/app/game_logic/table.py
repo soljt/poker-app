@@ -101,6 +101,7 @@ class Table:
                     "chips": p.chips,
                     "folded": p.folded,
                     "current_bet": p.current_bet,
+                    "last_action": p.last_action,
                 }
             )
         return result
