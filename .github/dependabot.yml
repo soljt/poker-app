@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs; this keeps the pins current. Each PR
+  # bumps the SHA and its version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # A compromised release is usually caught and pulled within days, so
+    # don't propose anything younger than a week.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
