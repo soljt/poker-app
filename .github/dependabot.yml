@@ -13,3 +13,22 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # Base images in the Dockerfiles, and the db/redis images in the compose
+  # file, are pinned by digest; these keep them current.
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      # Postgres major upgrades need a dump and restore.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]

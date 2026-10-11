@@ -15,6 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the backend code
 COPY . .
 
+# Run as an unprivileged user. game_data is where recorded games go; the
+# compose file mounts a volume there, which starts out owned by this user.
+RUN useradd --system --uid 10001 --no-create-home poker \
+    && mkdir -p /app/game_data && chown poker /app/game_data
+USER poker
+
 # Ensure Flask runs in production
 ENV FLASK_APP=app
 ENV FLASK_ENV=production
