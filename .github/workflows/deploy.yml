@@ -28,6 +28,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      backend: ${{ steps.backend.outputs.digest }}
+      frontend: ${{ steps.frontend.outputs.digest }}
 
     steps:
       - name: Checkout code
@@ -41,6 +44,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend
+        id: backend
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ./backend
@@ -51,6 +55,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/poker-backend:${{ github.sha }}
 
       - name: Build and push frontend
+        id: frontend
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ./frontend
@@ -62,38 +67,43 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/poker-frontend:latest
             ${{ env.IMAGE_PREFIX }}/poker-frontend:${{ github.sha }}
 
-  deploy:
+  # Nothing here can reach the server. The home server follows the deploy
+  # branch (soljt/edge-proxy, home/app-pull), so this commits the compose file
+  # with each image pinned to the digest just built. The branch only moves
+  # once both images exist, and every deploy is a commit you can revert.
+  publish:
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: read
+      contents: write
+    concurrency:
+      group: deploy-branch
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+      - name: Commit pinned images to the deploy branch
         env:
-          GHCR_TOKEN: ${{ github.token }}
-          GHCR_USERNAME: ${{ github.actor }}
-          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: GHCR_TOKEN,GHCR_USERNAME,IMAGE_PREFIX
-          script: |
-            set -eu
+          BACKEND: ${{ env.IMAGE_PREFIX }}/poker-backend@${{ needs.build-and-push.outputs.backend }}
+          FRONTEND: ${{ env.IMAGE_PREFIX }}/poker-frontend@${{ needs.build-and-push.outputs.frontend }}
+        run: |
+          set -eu
+          out="$RUNNER_TEMP/docker-compose.yml"
+          sed -e "s|image: ghcr.io/soljt/poker-backend:latest|image: $BACKEND|" \
+              -e "s|image: ghcr.io/soljt/poker-frontend:latest|image: $FRONTEND|" \
+              docker-compose.yml > "$out"
+          grep -qF "image: $BACKEND" "$out" && grep -qF "image: $FRONTEND" "$out"
 
-            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
-
-            docker pull "$IMAGE_PREFIX/poker-backend:latest"
-            docker pull "$IMAGE_PREFIX/poker-frontend:latest"
-
-            cd ~/poker-app
-            git pull origin main
-            docker compose up -d --no-build
-            docker image prune -f
-            docker logout ghcr.io
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch -q origin deploy; then
+              git switch -q -c deploy FETCH_HEAD
+          else
+              git switch -q --orphan deploy
+          fi
+          cp "$out" docker-compose.yml
+          git add docker-compose.yml
+          git diff --cached --quiet || git commit -qm "Deploy $GITHUB_SHA"
+          git push -q origin deploy
