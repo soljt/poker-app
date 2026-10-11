@@ -1,0 +1,112 @@
+# Production stack. On the home server it runs from the deploy branch, which
+# CI writes after each build with the images pinned by digest, and app-pull
+# (soljt/edge-proxy, home/) applies. Secrets come from .env next to this file.
+#
+# Networks, one job each:
+#   ingress           frontend ↔ the home ingress (created by the ingress)
+#   api               frontend ↔ backend
+#   data              backend ↔ db, redis
+#   backend-internet  the backend's way out, for Cloudflare Turnstile
+services:
+  backend:
+    image: ghcr.io/soljt/poker-backend@sha256:e393be7d23313d89e69dffcf869ff3fa3c27ec7d3a81fca1ae5e11c205b261f7
+    container_name: poker-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://pokeruser:${POSTGRES_PASSWORD}@db:5432/pokerdb
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CACHE_REDIS_HOST=redis
+      - CACHE_REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - POKER_BOT_PASSWORD=${POKER_BOT_PASSWORD}
+      - TURNSTILE_SECRET=${TURNSTILE_SECRET}
+    volumes:
+      - game-data:/app/game_data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      - api
+      - data
+      - backend-internet
+
+  frontend:
+    image: ghcr.io/soljt/poker-frontend@sha256:d7b94155e97d15de6d438fdcd6bdd9a13a71d04160b54d9f9b1f231ad2a5ab0d
+    container_name: poker-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # nginx keeps its pid and temp files in /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      ingress:
+        aliases:
+          - poker-app
+      api: {}
+
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    container_name: poker-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: pokeruser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: pokerdb
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    read_only: true
+    tmpfs:
+      - /var/run/postgresql
+      - /tmp
+    cap_drop: [ALL]
+    # The entrypoint fixes ownership of the data directory as root, then
+    # switches to the postgres user.
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    networks:
+      - data
+
+  redis:
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
+    container_name: poker-redis
+    restart: always
+    # Only rate-limit counters and cache, so nothing is saved to disk.
+    user: redis
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks:
+      - data
+
+volumes:
+  game-data:
+  postgres-data:
+
+networks:
+  ingress:
+    external: true
+    name: ingress-poker
+  api:
+    internal: true
+  data:
+    internal: true
+  backend-internet: {}
