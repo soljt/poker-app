@@ -9,7 +9,7 @@
 #   backend-internet  the backend's way out, for Cloudflare Turnstile
 services:
   backend:
-    image: ghcr.io/soljt/poker-backend@sha256:f3386c36eec20629ec8e78ed4e18552fad1577fe25be0e8164dc848f9e276185
+    image: ghcr.io/soljt/poker-backend@sha256:1971aa04c28696803536ecb62e5c0d7fe9655c1b892d8a9a9c3e32ece65cf396
     container_name: poker-backend
     restart: unless-stopped
     depends_on:
@@ -38,7 +38,7 @@ services:
       - backend-internet
 
   frontend:
-    image: ghcr.io/soljt/poker-frontend@sha256:c68ac4815bb6c75f35a8d175e3609fee42c8f9fa30de65f3d5bfe8fec9ce791e
+    image: ghcr.io/soljt/poker-frontend@sha256:4414372987225de968150d89317091e6cc5bf08d6423724f2642b59e34cc9f80
     container_name: poker-frontend
     restart: unless-stopped
     depends_on:
