@@ -22,6 +22,12 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      # A new Python needs the pinned requirements to support it first.
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
   - package-ecosystem: docker-compose
     directory: /
     schedule:
